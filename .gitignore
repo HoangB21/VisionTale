@@ -1,4 +1,4 @@
-# Python缓存文件
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,29 +6,29 @@ __pycache__/
 .coverage
 htmlcov/
 
-# 虚拟环境
+# Virtual environments
 venv/
 env/
 .env/
 
-# IDE配置文件
+# IDE config files
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# 项目文件
+# Project files
 projects/*
 !projects/.gitkeep
 
-# 测试文件
+# Test files
 server/tests/
 *文.md
 
-# 系统文件
+# System files
 .DS_Store
 Thumbs.db
 
-# 日志文件
+# Log files
 *.log
-logs/ 
+logs/
