@@ -3,22 +3,24 @@ import os
 from typing import Dict, List, Optional, Any
 from .base_service import SingletonService
 
+
 class WorkflowService(SingletonService):
     def _initialize(self):
-        """初始化工作流服务。"""
-        # 获取服务器根目录
-        self.server_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        """Initialize workflow service."""
+        # Get server root directory
+        self.server_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))
         self.workflow_dir = os.path.join(self.server_root, "workflow")
 
     def load_workflow(self, workflow_name: Optional[str]) -> Optional[Dict[str, Any]]:
-        """加载工作流配置。"""
+        """Load workflow configuration."""
         if workflow_name is None:
             workflow_name = "default_workflow.json"
-            
+
         workflow_path = os.path.join(self.workflow_dir, workflow_name)
-        
+
         print(f"Loading workflow from: {workflow_path}")
-        
+
         try:
             if not os.path.exists(workflow_path):
                 if os.path.exists(workflow_name):
@@ -26,13 +28,15 @@ class WorkflowService(SingletonService):
                 else:
                     print(f"Workflow file not found at: {workflow_path}")
                     if not workflow_name.endswith('.json'):
-                        workflow_path = os.path.join(self.workflow_dir, workflow_name + '.json')
+                        workflow_path = os.path.join(
+                            self.workflow_dir, workflow_name + '.json')
                         if not os.path.exists(workflow_path):
-                            print(f"Workflow file not found at: {workflow_path}")
+                            print(
+                                f"Workflow file not found at: {workflow_path}")
                             return None
                     else:
                         return None
-                
+
             with open(workflow_path, 'r', encoding='utf-8') as f:
                 workflow_data = json.load(f)
                 if not isinstance(workflow_data, dict):
@@ -42,9 +46,9 @@ class WorkflowService(SingletonService):
         except Exception as e:
             print(f"Error loading workflow: {str(e)}")
             return None
-    
+
     def update_workflow_prompt(self, workflow: Dict[str, Any], prompt: str, negative_prompt: str = '') -> Dict[str, Any]:
-        """更新工作流中的提示词。"""
+        """Update prompts in the workflow."""
         for node in workflow.values():
             if node.get('class_type') == 'CLIPTextEncodeFlux':
                 title = str.lower(node['_meta'].get('title', ''))
@@ -65,16 +69,17 @@ class WorkflowService(SingletonService):
         return workflow
 
     def update_workflow_seed(self, workflow: Dict[str, Any], seed: int) -> Dict[str, Any]:
-        """更新工作流中的随机种子。"""
+        """Update random seed in the workflow."""
         for node in workflow.values():
             if node.get('class_type') in ['RandomNoise', 'KSampler']:
-                seed_key = 'noise_seed' if node.get('class_type') == 'RandomNoise' else 'seed'
+                seed_key = 'noise_seed' if node.get(
+                    'class_type') == 'RandomNoise' else 'seed'
                 node['inputs'][seed_key] = seed
                 break
         return workflow
 
     def update_workflow_params(self, workflow: Dict[str, Any], params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """更新工作流中的其他参数。"""
+        """Update other parameters in the workflow."""
         if not params:
             return workflow
         for node in workflow.values():
@@ -84,32 +89,38 @@ class WorkflowService(SingletonService):
                 if 'height' in params:
                     node['inputs']['height'] = params['height']
         return workflow
-    
+
     def update_workflow_reference_image(self, workflow: Dict[str, Any], reference_image_paths: List[str]) -> Dict[str, Any]:
-        """更新工作流中的参考图片，并删除无效的依赖。"""
+        """Update reference images in the workflow and remove invalid dependencies."""
         delete_nodes = []
         table = {"one": 0, "two": 1, "three": 2}
-
-        if reference_image_paths[1]=='' and reference_image_paths[2]!='':
-            reference_image_paths=(reference_image_paths[0],reference_image_paths[2],'')
+        print("Ref image paths: ", reference_image_paths)
+        # Sort reference_image_paths based on length, empty strings will be at the end
+        reference_image_paths = sorted(
+            reference_image_paths, key=lambda x: (x == '', len(x) if x else 0))
+        # Convert back to tuple with exactly 3 elements, padding with empty strings if needed
+        reference_image_paths = tuple(
+            list(reference_image_paths[:3]) + [''] * (3 - len(reference_image_paths)))
 
         for k, node in workflow.items():
             if node.get('class_type') == 'JDC_ImageLoader':
                 title = str.lower(node['_meta'].get('title', ''))
                 for key, value in table.items():
                     if key in title:
-                        if value < len(reference_image_paths) and reference_image_paths[value]!='':
+                        if value < len(reference_image_paths) and reference_image_paths[value] != '':
                             node['inputs']['image'] = reference_image_paths[value]
+                            # print(f"Updated node {k}: {node}")
                         else:
                             delete_nodes.append(k)
 
         if delete_nodes:
-            print(f"Nodes to delete due to missing reference images: {delete_nodes}")
+            print(
+                f"Nodes to delete due to missing reference images: {delete_nodes}")
             return self.delete_workflow_nodes(workflow, delete_nodes)
         return workflow
 
     def _get_required_inputs_for_node(self, node: Dict[str, Any]) -> List[str]:
-        """获取节点的必需输入列表。"""
+        """Get the required input list for a node."""
         class_type = node.get('class_type', '')
         required_inputs = {
             'KSampler': ['model', 'positive', 'negative', 'latent_image'],
@@ -126,13 +137,13 @@ class WorkflowService(SingletonService):
 
     def delete_workflow_nodes(self, workflow: Dict[str, Any], nodes_to_delete: List[str]) -> Dict[str, Any]:
         """
-        删除工作流中的节点，并智能地尝试重新连接依赖关系以保持工作流的完整性。
+        Delete nodes in the workflow and intelligently attempt to reconnect dependencies to maintain workflow integrity.
         """
         if not nodes_to_delete:
             return workflow
 
         all_nodes_to_delete = set(nodes_to_delete)
-        
+
         graph_changed = True
         while graph_changed:
             graph_changed = False
@@ -155,11 +166,12 @@ class WorkflowService(SingletonService):
                             if ref_node and input_name in ref_node.get('inputs', {}):
                                 new_source_input = ref_node['inputs'][input_name]
                                 if isinstance(new_source_input, list) and new_source_input and str(new_source_input[0]) != node_id:
-                                    print(f"Re-wiring node {node_id}: input '{input_name}' from {ref_node_id} to {new_source_input[0]}")
+                                    print(
+                                        f"Re-wiring node {node_id}: input '{input_name}' from {ref_node_id} to {new_source_input[0]}")
                                     inputs[input_name] = new_source_input
                                     can_rewire = True
                                     graph_changed = True
-                            
+
                             if not can_rewire:
                                 if input_name in self._get_required_inputs_for_node(node):
                                     should_delete_node = True
@@ -167,21 +179,21 @@ class WorkflowService(SingletonService):
                                 else:
                                     inputs.pop(input_name, None)
                                     graph_changed = True
-                
+
                 if should_delete_node:
                     all_nodes_to_delete.add(node_id)
 
             if len(all_nodes_to_delete) > initial_delete_count:
                 graph_changed = True
-        
+
         for node_id in all_nodes_to_delete:
             if node_id in workflow:
                 del workflow[node_id]
-        
+
         return workflow
 
     def list_workflows(self) -> List[Dict[str, Any]]:
-        """列出所有可用的工作流。"""
+        """List all available workflows."""
         workflows = []
         try:
             for filename in os.listdir(self.workflow_dir):
@@ -199,25 +211,26 @@ class WorkflowService(SingletonService):
                             # Extract more details if possible
                             workflows.append(info)
                     except Exception as e:
-                        print(f"Error loading workflow info {filename}: {str(e)}")
+                        print(
+                            f"Error loading workflow info {filename}: {str(e)}")
             return sorted(workflows, key=lambda x: x['name'])
         except Exception as e:
             print(f"Error listing workflows: {str(e)}")
             return []
 
     def get_workflow(self, name: str) -> Optional[Dict[str, Any]]:
-        """获取指定工作流的详细信息。"""
+        """Get detailed information of a specific workflow."""
         if not name.endswith('.json'):
             name += '.json'
-        
+
         workflow_path = os.path.join(self.workflow_dir, name)
         if not os.path.exists(workflow_path):
             return None
-            
+
         try:
             with open(workflow_path, 'r', encoding='utf-8') as f:
                 workflow = json.load(f)
-            
+
             metadata = {
                 'name': name,
                 'path': workflow_path,
@@ -234,4 +247,4 @@ class WorkflowService(SingletonService):
             return {'metadata': metadata, 'workflow': workflow}
         except Exception as e:
             print(f"Error getting workflow {name}: {str(e)}")
-            return None 
+            return None

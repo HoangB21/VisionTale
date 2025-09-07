@@ -13,80 +13,84 @@ from server.utils.image_effect import ImageEffects
 
 logger = logging.getLogger(__name__)
 
+
 class VideoService:
-    """视频生成服务"""
-    
+    """Video Generation Service"""
+
     def __init__(self):
         self.default_settings = {
             'resolution': (1024, 1024),
             'fps': 20,
-            'threads': max(2,os.cpu_count()//2),
+            'threads': max(2, os.cpu_count()//2),
             'use_cuda': True,
             'codec': 'h264_nvenc',
             'batch_size': max(2, os.cpu_count()//2),
-            'fade_duration': 1,  # 淡入淡出时长（秒）
+            'fade_duration': 1,  # Fade in/out duration (seconds)
             'use_pan': True,
-            'pan_range': (0.5, 0.5),  # 横向移动原图可用范围的50%，纵向50%
+            # 50% of original image range for horizontal pan, 50% for vertical
+            'pan_range': (0.5, 0.5),
         }
         self.stop_flag = threading.Event()
         self.cuda_available = self._check_hardware()
-        # 进度追踪
+        # Progress tracking
         self.progress = 0
         self.total_segments = 0
         self.current_task = None
         self.task_lock = threading.Lock()
 
     def _check_hardware(self) -> bool:
-        """检查硬件编码支持"""
+        """Check hardware encoding support"""
         try:
-            result = subprocess.run(['ffmpeg', '-encoders'], capture_output=True, text=True)
+            result = subprocess.run(
+                ['ffmpeg', '-encoders'], capture_output=True, text=True)
             cuda_available = 'h264_nvenc' in result.stdout
-     
+
             if not cuda_available:
-                logger.warning("NVENC不可用，切换至CPU模式")
+                logger.warning("NVENC unavailable, switching to CPU mode")
                 self.default_settings.update({
                     'use_cuda': False,
                 })
             else:
-                logger.info("NVENC可用，使用GPU模式")
+                logger.info("NVENC available, using GPU mode")
             return cuda_available
         except Exception as e:
-            logger.error("硬件检测失败: %s", str(e))
+            logger.error("Hardware detection failed: %s", str(e))
             return False
 
     def _load_resources(self, subdir_path: str, resolution: Tuple[int, int]) -> tuple:
-        """加载图片和音频资源"""
+        """Load image and audio resources"""
         image_path = os.path.join(subdir_path, "image.png")
         audio_path = os.path.join(subdir_path, "audio.mp3")
 
-        # 验证文件有效性
+        # Validate file existence
         for path in [image_path, audio_path]:
             if not os.path.exists(path):
-                raise FileNotFoundError(f"文件不存在: {path}")
+                raise FileNotFoundError(f"File not found: {path}")
             if os.path.getsize(path) < 1024:
-                raise ValueError(f"文件过小: {path}")
+                raise ValueError(f"File too small: {path}")
 
-        # 加载图片
+        # Load image
         with Image.open(image_path) as img:
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-            image=img.copy()
+            image = img.copy()
             # image = img.resize(resolution, Image.LANCZOS)
 
-        # 加载音频
+        # Load audio
         audio = AudioFileClip(audio_path)
         if audio.duration is None or audio.duration < 0.05:
-            audio.close()  # 释放文件句柄
-            raise ValueError(f"音频文件时长过短或无效: {audio_path}")
-            
+            audio.close()  # Release file handle
+            raise ValueError(
+                f"Audio file duration too short or invalid: {audio_path}")
+
         return image, audio
 
     async def _process_segment(self, subdir: str, temp_dir: str, settings: Dict) -> Optional[Tuple[str, str]]:
-        """处理单个视频片段"""
-        # 增加subdir，进一步确保唯一性
+        """Process a single video segment"""
+        # Add subdir for uniqueness
         temp_file = os.path.join(temp_dir, f"vid_{subdir}_{os.getpid()}.mp4")
         temp_audio_path = os.path.join(
-            os.path.dirname(temp_file), 
+            os.path.dirname(temp_file),
             f"temp_audio_{subdir}_{os.getpid()}_{time.time_ns()}.m4a"
         )
         start_time = time.time()
@@ -95,47 +99,51 @@ class VideoService:
         audio = None
 
         try:
-            # 在线程中加载资源
+            # Load resources in thread
             loop = asyncio.get_running_loop()
             image, audio = await loop.run_in_executor(
-                None, 
-                lambda: self._load_resources(os.path.join(settings['chapter_path'], subdir), settings['resolution'])
+                None,
+                lambda: self._load_resources(os.path.join(
+                    settings['chapter_path'], subdir), settings['resolution'])
             )
-            
+
             duration = audio.duration
             total_frames = int(duration * settings['fps'])
             if total_frames == 0:
-                raise ValueError(f"计算的总帧数为0，视频时长过短。 Subdir: {subdir}")
+                raise ValueError(
+                    f"Calculated total frames is 0, video duration too short. Subdir: {subdir}")
 
-            # 批量生成帧
+            # Generate frames in batch
             for i in range(total_frames):
                 if self.stop_flag.is_set():
                     break
-                # 线程处理图像
+                # Process image in thread
                 frame = await loop.run_in_executor(
                     None,
-                    lambda: self._apply_effects(image.copy(), i/settings['fps'], duration, settings, subdir)
+                    lambda: self._apply_effects(
+                        image.copy(), i/settings['fps'], duration, settings, subdir)
                 )
                 frames.append(np.array(frame))
                 frame.close()
 
-            # 写入视频
+            # Write video
             await loop.run_in_executor(
                 None,
-                lambda: self._write_temp_video(frames, audio, temp_file, temp_audio_path, settings)
+                lambda: self._write_temp_video(
+                    frames, audio, temp_file, temp_audio_path, settings)
             )
-            
-            logger.info("完成片段 %s | 耗时: %.1fs | 大小: %.1fMB", 
-                       subdir, time.time()-start_time, os.path.getsize(temp_file)/1024/1024)
-            
-            # 更新进度
+
+            logger.info("Completed segment %s | Time taken: %.1fs | Size: %.1fMB",
+                        subdir, time.time()-start_time, os.path.getsize(temp_file)/1024/1024)
+
+            # Update progress
             with self.task_lock:
                 self.progress += 1
-                
+
             return temp_file, temp_audio_path
 
         finally:
-            # 只释放内存资源，不再处理文件删除
+            # Release memory resources only, no file deletion handling
             if image:
                 image.close()
             if audio:
@@ -145,139 +153,145 @@ class VideoService:
 
     def _write_temp_video(self, frames: list, audio: AudioFileClip, output_path: str, temp_audio_path: str, settings: Dict):
         """
-        安全写入视频片段
-        使用临时文件来暂存，避免内存占用过高
+        Safely write video segment
+        Use temporary file to store, avoiding high memory usage
         """
         with ImageSequenceClip(frames, fps=settings['fps']) as video_clip:
-            # 使用 .with_duration() 来精确、安全地对齐音视频时长
-            # 这会优雅地处理时长不匹配问题，无论是填充静音还是截断
+            # Use .with_duration() to precisely and safely align audio-video duration
+            # Elegantly handles duration mismatches by padding with silence or truncating
             final_audio = audio.with_duration(video_clip.duration)
 
-            # 绑定音频
+            # Bind audio
             final_clip = video_clip.with_audio(final_audio)
 
-            # 设置编码参数
+            # Set encoding parameters
             ffmpeg_params = []
             if settings.get('use_cuda', False) and self.cuda_available:
-                ffmpeg_params.extend(['-c:v', 'h264_nvenc', '-preset', 'medium', '-gpu', '0'])
+                ffmpeg_params.extend(
+                    ['-c:v', 'h264_nvenc', '-preset', 'medium'])
             else:
-                ffmpeg_params.extend(['-c:v', 'libx264', '-preset', 'medium', '-crf', '23'])
-
-            # 写入文件
+                ffmpeg_params.extend(
+                    ['-c:v', 'libx264', '-preset', 'medium', '-crf', '23'])
+            print("reach _write_temp_video ")
+            # Write file
             final_clip.write_videofile(
                 output_path,
-                codec=None,
+                codec='h264_nvenc',
                 audio_codec='aac',
-                temp_audiofile=temp_audio_path, # 明确指定临时音频文件路径
+                temp_audiofile=temp_audio_path,  # Explicitly specify temporary audio file path
                 threads=settings.get('threads', 4),
                 ffmpeg_params=ffmpeg_params,
                 logger=None
             )
 
     async def generate_video(self, chapter_path: str, video_settings: Dict = None) -> str:
-        """生成视频主流程"""
+        """Main video generation process"""
         chapter_path = os.path.abspath(chapter_path)
         self.stop_flag.clear()
         final_settings = {**self.default_settings, **(video_settings or {})}
-        
+
         final_settings['chapter_path'] = chapter_path
         output_path = os.path.join(chapter_path, "video.mp4")
         temp_video_files = []
         all_temp_files = []
-   
+
         try:
-            # 获取待处理片段列表
+            # Get list of segments to process
             subdirs = sorted([
                 d for d in os.listdir(chapter_path)
                 if os.path.isdir(os.path.join(chapter_path, d)) and d.isdigit()
             ], key=lambda x: int(x))
-            
-            if not subdirs:
-                raise ValueError("无有效视频片段")
 
-            # 初始化进度信息
+            if not subdirs:
+                raise ValueError("No valid video segments")
+
+            # Initialize progress information
             with self.task_lock:
                 self.progress = 0
                 self.total_segments = len(subdirs)
                 self.current_task = f"{os.path.basename(chapter_path)}"
-          
-            logger.info("发现 %d 个待处理片段", len(subdirs))
-            
-            # 分批处理片段
+
+            logger.info("Found %d segments to process", len(subdirs))
+
+            # Process segments in batches
             batch_size = final_settings.get('batch_size', 8)
             for i in range(0, len(subdirs), batch_size):
                 batch = subdirs[i:i+batch_size]
-                tasks = [self._process_segment(subdir, chapter_path, final_settings) for subdir in batch]
-                
-                # 等待当前批次完成，即使有异常也继续
+                tasks = [self._process_segment(
+                    subdir, chapter_path, final_settings) for subdir in batch]
+
+                # Wait for current batch to complete, continue even if exceptions occur
                 batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # 收集结果并处理异常
+
+                # Collect results and handle exceptions
                 for result in batch_results:
                     if isinstance(result, Exception):
-                        logger.error("一个视频片段处理失败: %s", result)
+                        logger.error(
+                            "One video segment processing failed: %s", result)
                     elif result:
                         video_path, audio_path = result
                         temp_video_files.append(video_path)
                         all_temp_files.extend([video_path, audio_path])
-                
-                # 检查是否取消
-                if self.stop_flag.is_set():
-                    # 在finally中统一处理清理
-                    logger.info("视频生成被用户取消")
-                    raise ValueError("视频生成被用户取消")
 
-            # 检查是否有任何片段失败
+                # Check for cancellation
+                if self.stop_flag.is_set():
+                    # Handle cleanup in finally block
+                    logger.info("Video generation cancelled by user")
+                    raise ValueError("Video generation cancelled by user")
+
+            # Check if any segments failed
             if len(temp_video_files) != len(subdirs):
-                 raise ValueError("部分视频片段生成失败，无法合并。请检查日志。")
-                        
-            # 合并临时文件
+                raise ValueError(
+                    "Some video segments failed to generate, cannot merge. Check logs.")
+
+            # Merge temporary files
             if not temp_video_files:
-                raise ValueError("没有生成有效视频片段")
-                
-            # 更新进度状态为合并阶段
+                raise ValueError("No valid video segments generated")
+
+            # Update progress status to merging phase
             with self.task_lock:
-                self.current_task = "合并视频中"
-            
-            # 执行合并
+                self.current_task = "Merging videos"
+
+            # Perform merging
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
                 None,
-                lambda: self._merge_videos(temp_video_files, output_path, final_settings)
+                lambda: self._merge_videos(
+                    temp_video_files, output_path, final_settings)
             )
-            
-            # 标记完成
+
+            # Mark completion
             with self.task_lock:
-                self.current_task = "已完成"
+                self.current_task = "Completed"
                 self.progress = self.total_segments
-                
+
             return result
 
         except Exception as e:
-            logger.error("视频生成失败: %s", str(e))
+            logger.error("Video generation failed: %s", str(e))
             raise
         finally:
-            # 清理临时文件
+            # Clean up temporary files
             if all_temp_files:
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, self._cleanup_temp_files, all_temp_files)
 
     def _merge_videos(self, temp_files: List[str], output_path: str, settings: Dict) -> str:
-        """合并视频片段"""
+        """Merge video segments"""
         concat_list = os.path.join(os.path.dirname(output_path), "concat.txt")
-        # 写入到一个临时文件，避免在合并过程中被读取
-        # 通过在扩展名前插入标记来创建临时文件名，保留原始扩展名
+        # Write to a temporary file to avoid reading during merging
+        # Create temporary filename by inserting marker before extension, preserving original extension
         root, ext = os.path.splitext(output_path)
         temp_output_path = f"{root}.tmp_{os.getpid()}{ext}"
-       
+
         try:
-            # 生成合并列表
+            # Generate merge list
             with open(concat_list, 'w', encoding='utf-8') as f:
                 for file in temp_files:
                     file_path = os.path.abspath(file).replace('\\', '/')
                     f.write(f"file '{file_path}'\n")
-            
-            # 构建FFmpeg命令
+
+            # Build FFmpeg command
             cmd = [
                 'ffmpeg',
                 '-f', 'concat',
@@ -289,33 +303,33 @@ class VideoService:
             ]
             if settings.get('use_cuda', False) and self.cuda_available:
                 cmd[1:1] = ['-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda']
-      
-            # 执行命令
+
+            # Execute command
             subprocess.run(cmd, check=True, capture_output=True)
-            
-            # 原子化地替换/重命名文件
+
+            # Atomically replace/rename file
             os.replace(temp_output_path, output_path)
 
-            logger.info("视频合并成功: %s", output_path)
+            logger.info("Video merge successful: %s", output_path)
             return output_path
-            
+
         except subprocess.CalledProcessError as e:
-            # 解码错误信息
+            # Decode error message
             import locale
             encoding = locale.getpreferredencoding()
             error_msg = e.stderr.decode(encoding, errors='replace')
-            logger.error("合并失败: %s", error_msg)
+            logger.error("Merge failed: %s", error_msg)
             raise
         finally:
-            # 确保所有临时文件都被清理
+            # Ensure all temporary files are cleaned up
             if os.path.exists(concat_list):
                 os.remove(concat_list)
             if os.path.exists(temp_output_path):
                 os.remove(temp_output_path)
 
-    def _apply_effects(self, image: Image.Image, time_val: float, 
-                      duration: float, settings: Dict, subdir: str) -> Image.Image:
-        """应用视频特效"""
+    def _apply_effects(self, image: Image.Image, time_val: float,
+                       duration: float, settings: Dict, subdir: str) -> Image.Image:
+        """Apply video effects"""
         try:
             effect_params = {
                 'output_size': settings.get('resolution', self.default_settings['resolution']),
@@ -324,16 +338,16 @@ class VideoService:
                 'pan_range': settings.get('pan_range', (0.5, 0)),
                 'segment_index': int(subdir) if subdir.isdigit() else 0
             }
-            
+
             return ImageEffects.apply_effects(
                 image, time_val, duration, effect_params
             )
         except Exception as e:
-            logger.error("特效处理失败: %s", str(e))
+            logger.error("Effect processing failed: %s", str(e))
             raise
 
     def get_progress(self) -> Dict:
-        """获取当前视频生成进度"""
+        """Get current video generation progress"""
         with self.task_lock:
             total = max(1, self.total_segments)
             percentage = int((self.progress / total) * 100)
@@ -343,9 +357,9 @@ class VideoService:
                 "percentage": percentage,
                 "current_task": self.current_task
             }
-            
+
     def cancel_generation(self) -> bool:
-        """取消视频生成"""
+        """Cancel video generation"""
         self.stop_flag.set()
         return True
 
@@ -354,19 +368,22 @@ class VideoService:
         for f_path in files:
             if not os.path.exists(f_path):
                 continue
-            
+
             attempts = 3
             for i in range(attempts):
                 try:
                     os.remove(f_path)
-                    logger.debug("已清理: %s", f_path)
+                    logger.debug("Cleaned up: %s", f_path)
                     break  # Success
                 except PermissionError as e:  # Specifically catch PermissionError for retries
                     if i < attempts - 1:
-                        logger.warning("文件被占用，将在0.5秒后重试: %s. Error: %s", f_path, e)
+                        logger.warning(
+                            "File locked, retrying in 0.5s: %s. Error: %s", f_path, e)
                         time.sleep(0.5)
                     else:
-                        logger.error("多次尝试后仍无法删除文件: %s. Error: %s", f_path, e)
+                        logger.error(
+                            "Failed to delete file after multiple attempts: %s. Error: %s", f_path, e)
                 except Exception as e:
-                    logger.error("清理临时文件时发生未知错误 %s: %s", f_path, str(e))
+                    logger.error(
+                        "Unknown error while cleaning temporary file %s: %s", f_path, str(e))
                     break  # Don't retry on other errors

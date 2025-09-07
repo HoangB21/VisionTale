@@ -1,10 +1,10 @@
 /*
-环境配置文件
-开发环境
-测试环境
-线上环境
+Environment configuration file
+Development environment
+Testing environment
+Production environment
 */
-//当前的环境
+// Current environment
 const env = 'local'
 
 const EnvConfig = {
@@ -13,12 +13,11 @@ const EnvConfig = {
     },
     prod: {
         baseApi: 'http://localhost:5001',
-
     },
 }
 
 export default {
     env,
-    //mock的总开关
+    // Mock master switch
     ...EnvConfig[env]
 }

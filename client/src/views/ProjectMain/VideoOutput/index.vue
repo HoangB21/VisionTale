@@ -2,7 +2,7 @@
   <div class="video-output">
     <h3>{{ t('videoOutput.title') }}</h3>
     
-    <!-- 章节选择 -->
+    <!-- Chapter selection -->
     <div class="section">
       <el-select 
         v-model="selectedChapter" 
@@ -18,10 +18,10 @@
       </el-select>
     </div>
 
-    <!-- 视频配置表单 -->
+    <!-- Video configuration form -->
     <div class="config-section">
       <el-form :model="videoSettings" label-width="180px">
-        <!-- 淡入淡出设置 -->
+        <!-- Fade duration -->
         <el-form-item :label="t('videoOutput.fadeDuration')">
           <el-input-number 
             v-model="videoSettings.fade_duration" 
@@ -29,7 +29,7 @@
             :max="2"
           />
         </el-form-item>
-        <!-- 画面平移设置 -->
+        <!-- Pan setting -->
         <el-form-item :label="t('videoOutput.usePan')">
           <el-switch v-model="videoSettings.use_pan" />
         </el-form-item>
@@ -54,7 +54,7 @@
           </el-form-item>
         </template>
 
-        <!-- 帧率设置 -->
+        <!-- Frame rate -->
         <el-form-item :label="t('videoOutput.fps')">
           <el-input-number 
             v-model="videoSettings.fps" 
@@ -63,7 +63,7 @@
           />
         </el-form-item>
         
-        <!-- 源图片分辨率 -->
+        <!-- Source image resolution -->
         <el-form-item :label="t('videoOutput.imageResolution')">
           <el-input-number 
             v-model="imageResolution[0]" 
@@ -82,7 +82,7 @@
           />
         </el-form-item>
 
-        <!-- 分辨率设置 -->
+        <!-- Output resolution -->
         <el-form-item :label="t('videoOutput.resolution')">
           <el-input-number 
             v-model="videoSettings.resolution[0]" 
@@ -106,7 +106,7 @@
       </el-form>
     </div>
 
-    <!-- 操作按钮和视频区域 -->
+    <!-- Action buttons and video area -->
     <div class="action-section">
       <el-button 
         type="primary" 
@@ -125,7 +125,7 @@
       </el-button>
     </div>
     
-    <!-- 进度条 -->
+    <!-- Progress bar -->
     <div v-if="isGenerating" class="progress-section">
       <div class="progress-info">
         <span>{{ progressInfo }}</span>
@@ -164,31 +164,30 @@ import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const projectName = route.params.name as string
-
 const { t } = useI18n()
 
-// 章节相关
+// Chapter related
 const chapters = ref<string[]>([])
 const selectedChapter = ref('')
 const imageResolution = ref<[number, number]>([512, 768])
 
-// 视频设置
+// Video settings
 const videoSettings = ref<VideoSettings>({
   project_name: projectName,
-  chapter_name:'',
-  fade_duration:1,
+  chapter_name: '',
+  fade_duration: 1,
   use_pan: true,
   pan_range: [0, 0.5],
   fps: 20,
-  resolution:[768,768]
+  resolution: [768, 768]
 })
 
-// 状态管理
+// State management
 const isGenerating = ref(false)
 const videoUrl = ref('')
 const errorMessage = ref('')
 
-// 进度相关
+// Progress related
 const progressData = ref<VideoProgress>({
   progress: 0,
   total: 0,
@@ -206,18 +205,18 @@ const progressStatus = computed(() => {
   return ''
 })
 
-// 开始定时获取进度
+// Start progress tracking
 const startProgressTracking = () => {
-  // 立即获取一次进度
+  // Fetch progress immediately
   fetchProgress()
   
-  // 设置定时器每秒获取一次进度
+  // Set interval to fetch progress every second
   progressInterval.value = window.setInterval(() => {
     fetchProgress()
   }, 1000)
 }
 
-// 停止进度跟踪
+// Stop progress tracking
 const stopProgressTracking = () => {
   if (progressInterval.value) {
     clearInterval(progressInterval.value)
@@ -231,50 +230,43 @@ const stopProgressTracking = () => {
   }
 }
 
-// 获取进度
+// Fetch progress
 const fetchProgress = async () => {
   try {
     const res = await videoApi.getGenerationProgress()
   
     if (res) {
-      
       progressData.value = res as VideoProgress
       
-      // 如果进度已完成并且当前正在生成，更新状态并停止跟踪
+      // Update state and stop tracking if progress is complete
       if (progressData.value.percentage >= 100 && isGenerating.value) {
         isGenerating.value = false
         stopProgressTracking()
-        handleChapterChange() // 刷新视频
+        handleChapterChange() // Refresh video
         ElMessage.success(t('videoOutput.generationComplete'))
       }
     }
   } catch (error) {
-    console.error('获取进度失败', error)
+    console.error('Failed to fetch progress', error)
   }
 }
 
-// 获取章节列表
-// 在组件中修改视频生成处理逻辑
+// Generate video
 const handleGenerateVideo = async () => {
   try {
-    videoSettings.value.chapter_name = selectedChapter.value;
-    
-    isGenerating.value = true;
-    // 开始跟踪进度
+    videoSettings.value.chapter_name = selectedChapter.value
+    isGenerating.value = true
     startProgressTracking()
-    
-    // 发起视频生成请求
     await videoApi.generateVideo(videoSettings.value)
   } catch (error) {
-    // 错误处理
     console.log(error)
-    isGenerating.value = false;
+    isGenerating.value = false
     stopProgressTracking()
     ElMessage.error(t('error.generateFailed'))
   }
 }
 
-// 取消视频生成
+// Cancel video generation
 const handleCancelGeneration = async () => {
   try {
     await videoApi.cancelGeneration()
@@ -282,61 +274,58 @@ const handleCancelGeneration = async () => {
     isGenerating.value = false
     stopProgressTracking()
   } catch (error) {
-    console.error('取消生成失败', error)
+    console.error('Failed to cancel generation', error)
     ElMessage.error(t('videoOutput.cancelFailed'))
   }
 }
 
-// 修改后的章节获取逻辑
+// Fetch chapters
 const fetchChapters = async () => {
   try {
     const res = await chapterApi.getChapterList(projectName)
-    
     chapters.value = res as unknown as string[]
-
     if (chapters.value.length > 0) {
       selectedChapter.value = chapters.value[0]
       videoUrl.value = getResourcePath(projectName, selectedChapter.value, '0', 'video')
     }
-    
   } catch (error) {
     errorMessage.value = t('error.fetchChapterListFailed')
   }
 }
 
-// 章节变更处理
+// Handle chapter change
 const handleChapterChange = () => {
   videoUrl.value = getResourcePath(projectName, selectedChapter.value, '0', 'video')
 }
 
-// 计算推荐分辨率
+// Calculate recommended resolution
 const calculateRecommendedResolution = () => {
   const [imgW, imgH] = imageResolution.value
   const [panX, panY] = videoSettings.value.pan_range
   const [outW, outH] = videoSettings.value.resolution
 
-  const roundToMultipleOf4 = (value: number) => Math.round(value / 4) * 4;
+  const roundToMultipleOf4 = (value: number) => Math.round(value / 4) * 4
 
   if (panX > 0) {
-    const recommendedW = roundToMultipleOf4((outH * (imgW / imgH)) / (1 + panX));
-    videoSettings.value.resolution[0] = recommendedW;
+    const recommendedW = roundToMultipleOf4((outH * (imgW / imgH)) / (1 + panX))
+    videoSettings.value.resolution[0] = recommendedW
   } else if (panY > 0) {
-    const recommendedH = roundToMultipleOf4((outW * (imgH / imgW)) / (1 + panY));
-    videoSettings.value.resolution[1] = recommendedH;
+    const recommendedH = roundToMultipleOf4((outW * (imgH / imgW)) / (1 + panY))
+    videoSettings.value.resolution[1] = recommendedH
   } else {
-    const recommendedW = roundToMultipleOf4(outH * (imgW / imgH));
-    videoSettings.value.resolution[0] = recommendedW;
+    const recommendedW = roundToMultipleOf4(outH * (imgW / imgH))
+    videoSettings.value.resolution[0] = recommendedW
   }
   
   ElMessage.success(t('videoOutput.resolutionUpdated'))
 }
 
-// 组件卸载前清理定时器
+// Cleanup timer on component unmount
 onBeforeUnmount(() => {
   stopProgressTracking()
 })
 
-// 初始化
+// Initialize
 onMounted(() => {
   fetchChapters()
 })

@@ -5,7 +5,7 @@
     },
     "class_type": "VAELoader",
     "_meta": {
-      "title": "加载VAE"
+      "title": "Load VAE"
     }
   },
   "2": {
@@ -17,7 +17,7 @@
     },
     "class_type": "DualCLIPLoader",
     "_meta": {
-      "title": "双CLIP加载器"
+      "title": "DualCLIPLoader"
     }
   },
   "3": {
@@ -29,7 +29,7 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "条件零化"
+      "title": "ConditioningZeroOut"
     }
   },
   "7": {
@@ -45,7 +45,7 @@
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "VAE解码"
+      "title": "VAE Decode"
     }
   },
   "8": {
@@ -61,7 +61,7 @@
     },
     "class_type": "VAEEncode",
     "_meta": {
-      "title": "VAE编码"
+      "title": "VAE Encode"
     }
   },
   "9": {
@@ -106,7 +106,7 @@
     },
     "class_type": "FluxGuidance",
     "_meta": {
-      "title": "Flux引导"
+      "title": "FluxGuidance"
     }
   },
   "17": {
@@ -133,13 +133,13 @@
     },
     "class_type": "EmptySD3LatentImage",
     "_meta": {
-      "title": "空Latent图像（SD3）"
+      "title": "EmptySD3LatentImage"
     }
   },
   "20": {
     "inputs": {
       "seed": 793411131083054,
-      "steps": 8,
+      "steps": 5,
       "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "simple",
@@ -163,12 +163,12 @@
     },
     "class_type": "KSampler",
     "_meta": {
-      "title": "K采样器"
+      "title": "KSampler"
     }
   },
   "22": {
     "inputs": {
-      "model_path": "svdq-fp4_r32-flux.1-kontext-dev.safetensors",
+      "model_path": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
       "cache_threshold": 0,
       "attention": "nunchaku-fp16",
       "cpu_offload": "auto",
@@ -191,13 +191,13 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP Text Encode (Positive Prompt)"
+      "title": "CLIP Text Encode (Prompt)"
     }
   },
   "26": {
     "inputs": {
-      "lora_name": "flux.1-turbo-alpha.safetensors",
-      "lora_strength": 1.0000000000000002,
+      "lora_name": "ghibliStyle_kontext_byJaneB.safetensors",
+      "lora_strength": 1,
       "model": [
         "22",
         0
@@ -205,7 +205,7 @@
     },
     "class_type": "NunchakuFluxLoraLoader",
     "_meta": {
-      "title": "Nunchaku FLUX.1 LoRA Loader"
+      "title": "Nunchaku FLUX LoRA Loader"
     }
   },
   "27": {
@@ -217,7 +217,7 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "预览图像"
+      "title": "Preview Image"
     }
   },
   "30": {
@@ -260,7 +260,7 @@
   },
   "37": {
     "inputs": {
-      "text": "bad hand, bad finger,l ogo, Backlight, nsfw, worst quality, low resolution, twisted, watermark",
+      "text": "bad hand, bad finger,logo, Backlight, nsfw, worst quality, low resolution, twisted, watermark",
       "clip": [
         "2",
         0
@@ -268,7 +268,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码 (Negative Prompt)"
+      "title": "CLIP(Negative Prompt)"
     }
   },
   "38": {

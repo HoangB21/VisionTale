@@ -23,12 +23,12 @@ interface ChapterResponse {
 }
 
 export const chapterApi = {
-  // 获取章节列表
+  // Get chapter list
   getChapterList(projectName: string) {
     return request.get<string[]>('/chapter/list', { project_name: projectName })
   },
 
-  // 获取章节内容
+  // Get chapter content
   getChapterContent(projectName: string, chapterName: string) {
     return request.get<ChapterContent>('/chapter/content', {
       project_name: projectName,
@@ -36,25 +36,25 @@ export const chapterApi = {
     })
   },
 
-  // 生成章节内容
+  // Generate chapter content
   generateChapter(params: GenerateChapterParams & { signal?: AbortSignal }) {
     return request.stream('/chapter/generate', params, {
       signal: params.signal
     })
   },
 
-  // 保存章节内容
+  // Save chapter content
   saveChapterContent(params: SaveChapterParams) {
     return request.post('/chapter/save', params)
   },
 
-  // 创建新章节
+  // Create new chapter
   createChapter(projectName: string) {
     return request.post<ChapterResponse>('/chapter/create', { project_name: projectName })
   },
 
   /**
-   * 分割章节内容并生成提示词
+   * Split chapter content and generate prompts
    */
   splitChapter(projectName: string, chapterName: string) {
     return request.post('/chapter/split_text', {
@@ -63,7 +63,7 @@ export const chapterApi = {
     })
   },
 
-  // 提取章节中的角色
+  // Extract characters from chapter
   extractCharacters(projectName: string, chapterName: string) {
     return request.post('/chapter/extract_characters', {
       project_name: projectName,
@@ -72,7 +72,7 @@ export const chapterApi = {
   },
 
   /**
-   * 获取章节场景列表
+   * Get chapter scene list
    */
   getChapterSceneList(projectName: string, chapterName: string) {
     return request.get('/chapter/scene_list', {
@@ -81,7 +81,7 @@ export const chapterApi = {
     })
   },
 
-  // 保存场景修改
+  // Save scene modifications
   saveScenes(projectName: string, chapterName: string, scenes: any[]) {
     return request.post('/chapter/save_scenes', {
       project_name: projectName,
@@ -91,10 +91,11 @@ export const chapterApi = {
   },
 
   translatePrompt(projectName: string, prompts: string[]) {
+    console.log("Translate prompts: ", prompts);
+
     return request.post<string[]>('/chapter/translate_prompt', {
       project_name: projectName,
       prompts
     })
   }
 }
-

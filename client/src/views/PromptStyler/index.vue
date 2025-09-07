@@ -27,16 +27,16 @@
       <el-col :span="8" v-for="(item, idx) in filteredStyles" :key="item.name" class="style-card-col">
         <el-card class="style-card" shadow="hover">
           <div class="style-card-header">
-            <h3>{{ item.name || item.chinese_name }}</h3>
-            <div class="style-card-name">{{ item.chinese_name||item.name }}</div>
+            <h3>{{ item.name || item.vietnamese_name }}</h3>
+            <div class="style-card-name">{{ item.vietnamese_name || item.name }}</div>
           </div>
           <div class="style-card-content">
             <div class="prompt-item">
-              <span class="label">{{ t('promptStyler.positivePrompt') }}：</span>
+              <span class="label">{{ t('promptStyler.positivePrompt') }}:</span>
               <p class="value">{{ item.prompt }}</p>
             </div>
             <div class="prompt-item">
-              <span class="label">{{ t('promptStyler.negativePrompt') }}：</span>
+              <span class="label">{{ t('promptStyler.negativePrompt') }}:</span>
               <p class="value">{{ item.negative_prompt }}</p>
             </div>
           </div>
@@ -52,7 +52,7 @@
       </el-col>
     </el-row>
 
-    <!-- 编辑/新增对话框 -->
+    <!-- Edit/Add dialog -->
     <el-dialog 
       :title="isEditing ? t('promptStyler.editStyleTitle') : t('promptStyler.addStyleTitle')" 
       v-model="dialogVisible"
@@ -63,8 +63,8 @@
         <el-form-item :label="t('promptStyler.englishName')" prop="name">
           <el-input v-model="editForm.name" :placeholder="t('promptStyler.englishNamePlaceholder')" />
         </el-form-item>
-        <el-form-item :label="t('promptStyler.chineseName')" prop="chinese_name">
-          <el-input v-model="editForm.chinese_name" :placeholder="t('promptStyler.chineseNamePlaceholder')" />
+        <el-form-item :label="t('promptStyler.vietnameseName')" prop="vietnamese_name">
+          <el-input v-model="editForm.vietnamese_name" :placeholder="t('promptStyler.vietnameseNamePlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('promptStyler.positivePrompt')" prop="prompt">
           <el-input 
@@ -103,7 +103,7 @@ import { adminApi } from '@/api/admin_api'
 
 interface PromptStyle {
   name: string
-  chinese_name: string
+  vietnamese_name: string
   prompt: string
   negative_prompt: string
 }
@@ -114,24 +114,24 @@ const saving = ref(false)
 const promptStyles = ref<PromptStyle[]>([])
 const searchQuery = ref('')
 
-// 过滤样式
+// Filter styles
 const filteredStyles = computed(() => {
   if (!searchQuery.value) return promptStyles.value
   
   const query = searchQuery.value.toLowerCase()
   return promptStyles.value.filter(style => 
     style.name.toLowerCase().includes(query) || 
-    (style.chinese_name && style.chinese_name.includes(query)) ||
+    (style.vietnamese_name && style.vietnamese_name.toLowerCase().includes(query)) ||
     style.prompt.toLowerCase().includes(query) ||
     style.negative_prompt.toLowerCase().includes(query)
   )
 })
 
-// 表单相关
+// Form related
 const dialogVisible = ref(false)
 const editForm = reactive<PromptStyle>({
   name: '',
-  chinese_name: '',
+  vietnamese_name: '',
   prompt: '',
   negative_prompt: ''
 })
@@ -144,16 +144,16 @@ const formRules: FormRules = {
     { required: true, message: t('promptStyler.nameRequired'), trigger: 'blur' },
     { min: 2, max: 50, message: t('promptStyler.nameLength'), trigger: 'blur' }
   ],
-  chinese_name: [
-    { required: true, message: t('promptStyler.chineseNameRequired'), trigger: 'blur' },
-    { min: 1, max: 50, message: t('promptStyler.chineseNameLength'), trigger: 'blur' }
+  vietnamese_name: [
+    { required: true, message: t('promptStyler.vietnameseNameRequired'), trigger: 'blur' },
+    { min: 1, max: 50, message: t('promptStyler.vietnameseNameLength'), trigger: 'blur' }
   ],
   prompt: [
     { required: true, message: t('promptStyler.promptRequired'), trigger: 'blur' }
   ]
 }
 
-// 获取所有提示词样式
+// Fetch all prompt styles
 const fetchPromptStyles = async () => {
   loading.value = true
   try {
@@ -164,31 +164,31 @@ const fetchPromptStyles = async () => {
       ElMessage.error(t('promptStyler.fetchFailed'))
     }
   } catch (error) {
-    console.error('获取样式列表出错:', error)
+    console.error('Error fetching styles:', error)
     ElMessage.error(t('promptStyler.networkError'))
   } finally {
     loading.value = false
   }
 }
 
-// 打开编辑对话框
+// Open edit dialog
 const openEditDialog = (idx: number) => {
   editIndex.value = idx
   Object.assign(editForm, promptStyles.value[idx])
   dialogVisible.value = true
 }
 
-// 打开新增对话框
+// Open add dialog
 const openAddDialog = () => {
   editIndex.value = -1
   editForm.name = ''
-  editForm.chinese_name = ''
+  editForm.vietnamese_name = ''
   editForm.prompt = ''
   editForm.negative_prompt = ''
   dialogVisible.value = true
 }
 
-// 保存提示词样式
+// Save prompt style
 const savePrompt = async () => {
   if (!formRef.value) return
   
@@ -198,30 +198,29 @@ const savePrompt = async () => {
     saving.value = true
     
     try {
-      // 深拷贝当前样式列表
+      // Deep copy current styles list
       const updatedStyles = JSON.parse(JSON.stringify(promptStyles.value))
       
       if (editIndex.value === -1) {
-        // 新增样式
+        // Add new style
         updatedStyles.push({
           name: editForm.name,
-          chinese_name: editForm.chinese_name,
+          vietnamese_name: editForm.vietnamese_name,
           prompt: editForm.prompt,
           negative_prompt: editForm.negative_prompt
         })
       } else {
-        // 编辑现有样式
+        // Edit existing style
         updatedStyles[editIndex.value] = {
           name: editForm.name,
-          chinese_name: editForm.chinese_name,
+          vietnamese_name: editForm.vietnamese_name,
           prompt: editForm.prompt,
           negative_prompt: editForm.negative_prompt
         }
       }
       
-      // 保存到服务器
+      // Save to server
       const res = await adminApi.savePromptStyles(updatedStyles)
-      console.log(res)
       if (res) {
         promptStyles.value = updatedStyles
         ElMessage.success(isEditing.value ? t('promptStyler.updateSuccess') : t('promptStyler.addSuccess'))
@@ -230,7 +229,7 @@ const savePrompt = async () => {
         ElMessage.error(t('promptStyler.saveFailed'))
       }
     } catch (error) {
-      console.error('保存样式出错:', error)
+      console.error('Error saving style:', error)
       ElMessage.error(t('promptStyler.networkError'))
     } finally {
       saving.value = false
@@ -238,7 +237,7 @@ const savePrompt = async () => {
   })
 }
 
-// 删除提示词样式
+// Delete prompt style
 const deletePrompt = (idx: number) => {
   ElMessageBox.confirm(
     t('promptStyler.deleteConfirmContent'),
@@ -250,11 +249,11 @@ const deletePrompt = (idx: number) => {
     }
   ).then(async () => {
     try {
-      // 深拷贝当前样式列表并删除指定项
+      // Deep copy current styles list and remove specified item
       const updatedStyles = JSON.parse(JSON.stringify(promptStyles.value))
       updatedStyles.splice(idx, 1)
       
-      // 保存到服务器
+      // Save to server
       const res = await adminApi.savePromptStyles(updatedStyles)
       
       if (res) {
@@ -264,11 +263,11 @@ const deletePrompt = (idx: number) => {
         ElMessage.error(t('promptStyler.saveFailed'))
       }
     } catch (error) {
-      console.error('删除样式出错:', error)
+      console.error('Error deleting style:', error)
       ElMessage.error(t('promptStyler.networkError'))
     }
   }).catch(() => {
-    // 用户取消删除，不做任何操作
+    // User cancelled deletion, do nothing
   })
 }
 
@@ -380,7 +379,6 @@ onMounted(fetchPromptStyles)
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  
 }
 
 .dialog-footer {

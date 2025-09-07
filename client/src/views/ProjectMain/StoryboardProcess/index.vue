@@ -1,6 +1,5 @@
 <template>
   <div class="storyboard-process">
-
     <el-card class="scene-table-card">
       <template #header>
         <div class="card-header">
@@ -8,9 +7,9 @@
         </div>
       </template>
 
-      <!-- 设置区域 -->
+      <!-- Settings area -->
       <div class="settings-container">
-        <!-- 第一排：章节选择 -->
+        <!-- First row: Chapter selection -->
         <el-row class="settings-row">
           <el-col :span="24">
             <el-select v-model="chapterName" :placeholder="t('storyboardProcess.chapterList')" class="chapter-select"
@@ -21,14 +20,14 @@
           </el-col>
         </el-row>
 
-        <!-- 第二排：图像设置 -->
+        <!-- Second row: Image settings -->
         <el-row :gutter="24" class="settings-row">
           <el-col :span="24">
             <ImageSettingsControl v-model="imageSettings" />
           </el-col>
         </el-row>
 
-        <!-- 第三排：音频设置 -->
+        <!-- Third row: Audio settings -->
         <el-row :gutter="24" class="settings-row">
           <el-col :span="24">
             <div class="settings-group">
@@ -55,7 +54,7 @@
           </el-col>
         </el-row>
 
-        <!-- 第四排：操作按钮 -->
+        <!-- Fourth row: Action buttons -->
         <el-row :gutter="24" class="settings-row">
           <el-col :span="24">
             <div class="action-buttons">
@@ -78,14 +77,14 @@
           </el-col>
         </el-row>
 
-        <!-- 第五排：进度显示 -->
+        <!-- Fifth row: Progress display -->
         <el-row v-show="imageGenerationProgress.taskId || audioGenerationProgress.taskId" :gutter="24"
                 class="settings-row progress-row">
           <el-col :span="24">
             <div class="settings-group">
               <div class="settings-title">{{ t('storyboardProcess.generationProgress') }}</div>
               <div class="progress-container">
-                <!-- 音频进度 -->
+                <!-- Audio progress -->
                 <div v-if="audioGenerationProgress.taskId" class="progress-with-button">
                   <el-progress 
                                :percentage="audioGenerationProgress.total > 0 ? Math.floor((audioGenerationProgress.current / audioGenerationProgress.total) * 100) : 0"
@@ -96,7 +95,7 @@
                     {{ t('storyboardProcess.stopGeneration') }}
                   </el-button>
                 </div>
-                <!-- 图片进度 -->
+                <!-- Image progress -->
                 <div v-if="imageGenerationProgress.taskId" class="progress-with-button">
                   <el-progress 
                                :percentage="imageGenerationProgress.total > 0 ? Math.floor((imageGenerationProgress.current / imageGenerationProgress.total) * 100) : 0"
@@ -148,7 +147,7 @@
                   <i>{{ t('storyboardProcess.baseScene') }}</i>
                 </template>
               </el-input>
-              <div class=" button-group">
+              <div class="button-group">
                 <el-button v-if="row.scene" size="small" type="primary" :loading="row.translating"
                            @click="convertSelectedPrompts([row])" :disabled="loading">
                   {{ t('storyboardProcess.convertToPrompt') }}
@@ -216,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElTable } from 'element-plus'
@@ -235,9 +234,9 @@ interface AudioSettings {
 }
 
 interface Scene {
-  id: string    // 添加序号字段
+  id: string    // Add index field
   span: string
-  base_scene:string
+  base_scene: string
   scene: string
   prompt: string
   translating: boolean
@@ -255,7 +254,7 @@ const route = useRoute()
 const { t } = useI18n()
 const projectName = computed(() => route.params.name as string)
 
-// 为图片和音频分别创建生成器实例
+// Create separate generator instances for images and audio
 const { 
   isGenerating: isGeneratingImages, 
   generationProgress: imageGenerationProgress, 
@@ -270,31 +269,30 @@ const {
   stop: stopAudioGeneration 
 } = useGeneration();
 
-// 获取提示词样式store
+// Get prompt style store
 const promptStyleStore = usePromptStyleStore()
 
-// 章节列表相关
+// Chapter list related
 const chapterList = ref<{ label: string; value: string }[]>([])
 const chapterName = ref('')
 
-// 图像设置
+// Image settings
 const imageSettings = ref<ImageSettings>({
   width: 512,
   height: 768,
   style: 'base'
 })
 
-// 音频设置
+// Audio settings
 const audioSettings = ref<AudioSettings>({
   narrator: '',
   speakingRate: 0
 })
 
-// 音频设置
-const voiceList = ref([
-])
+// Voice list
+const voiceList = ref([])
 
-// 获取章节列表
+// Fetch chapter list
 const fetchChapterList = async () => {
   try {
     const data = await chapterApi.getChapterList(projectName.value)
@@ -303,10 +301,10 @@ const fetchChapterList = async () => {
         label: chapter,
         value: chapter
       }))
-      // 如果有章节，默认选择第一个
+      // Select the first chapter by default if available
       if (chapterList.value.length > 0) {
         chapterName.value = chapterList.value[0].value
-        fetchSceneList() // 获取第一个章节的场景列表
+        fetchSceneList() // Fetch scene list for the first chapter
       }
     }
   } catch (error) {
@@ -314,18 +312,18 @@ const fetchChapterList = async () => {
   }
 }
 
-// 监听章节变化
+// Handle chapter change
 const handleChapterChange = () => {
-  selectedRows.value = [] // 清空选中状态
-  isAllSelected.value = false // 重置全选状态
-  fetchSceneList() // 当选择的章节改变时，重新获取场景列表
+  selectedRows.value = [] // Clear selected state
+  isAllSelected.value = false // Reset select all state
+  fetchSceneList() // Fetch scene list when selected chapter changes
 }
 
-// 添加选中行的状态
+// Add selected rows state
 const selectedRows = ref<Scene[]>([])
-const isAllSelected = ref(false)  // 用于跟踪是否全选
+const isAllSelected = ref(false)  // Track select all state
 
-// 全选状态的计算属性
+// Computed property for all checked
 const allChecked = computed({
   get() {
     return isAllSelected.value
@@ -333,13 +331,13 @@ const allChecked = computed({
   set(newValue) {
     isAllSelected.value = newValue
     if (newValue) {
-      // 全选时，将所有数据添加到选中列表
+      // Select all rows when select all is checked
       selectedRows.value = [...sceneList.value]
     } else {
-      // 取消全选时，清空选中列表
+      // Clear selected rows when select all is unchecked
       selectedRows.value = []
     }
-    // 更新当前页的选中状态
+    // Update current page selection state
     nextTick(() => {
       currentPageData.value.forEach(row => {
         tableRef.value?.toggleRowSelection(row, newValue)
@@ -348,33 +346,33 @@ const allChecked = computed({
   }
 })
 
-// 处理全选
+// Handle select all
 const handleSelectAll = (selection: Scene[]) => {
-  // 判断是全选还是取消全选
+  // Determine if it's select all or deselect all
   const isSelectAll = selection.length === currentPageData.value.length
   allChecked.value = isSelectAll
 }
 
-// 处理选择变化
+// Handle selection change
 const handleSelectionChange = (selection: Scene[]) => {
   if (!isAllSelected.value) {
-    // 如果不是全选状态，正常更新选中行
+    // Update selected rows normally if not in select all state
     selectedRows.value = selection
   }
 }
 
-// 页码改变
+// Handle page change
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
-  // 恢复选中状态
+  // Restore selection state
   nextTick(() => {
     if (isAllSelected.value) {
-      // 如果是全选状态，选中当前页所有行
+      // Select all rows on current page if in select all state
       currentPageData.value.forEach(row => {
         tableRef.value?.toggleRowSelection(row, true)
       })
     } else {
-      // 否则，只选中已选中的行
+      // Otherwise, only select previously selected rows
       currentPageData.value.forEach(row => {
         const isSelected = selectedRows.value.some(selected => selected.id === row.id)
         tableRef.value?.toggleRowSelection(row, isSelected)
@@ -383,14 +381,14 @@ const handleCurrentChange = (val: number) => {
   })
 }
 
-// 每页条数改变
+// Handle page size change
 const handleSizeChange = (val: number) => {
   pageSize.value = val
   currentPage.value = 1
 }
 
-// 批量操作方法
-const convertSelectedPrompts = async (selectedRows:Scene[]) => {
+// Batch operation methods
+const convertSelectedPrompts = async (selectedRows: Scene[]) => {
   try {
     if (selectedRows.length === 0) {
       ElMessage.warning(t('storyboardProcess.noSelection'))
@@ -404,31 +402,32 @@ const convertSelectedPrompts = async (selectedRows:Scene[]) => {
       return
     }
 
-    // 获取所有需要转换的场景描述
-    const descriptions = scenesToConvert.map(row =>"["+row.base_scene+"],"+row.scene)
+    // Get all scene descriptions to convert
+    const descriptions = scenesToConvert.map(row => "[" + row.base_scene + "]," + row.scene)
     scenesToConvert.forEach(row => {
-      row.translating = true//设置为正在转换
+      row.translating = true // Set to translating
     })
-    // 批量转换
+    
+    // Batch convert
     const results = await chapterApi.translatePrompt(projectName.value, descriptions)
     
-    // 更新场景的提示词
-    scenesToConvert.forEach((row:Scene, index) => {
+    // Update scene prompts
+    scenesToConvert.forEach((row: Scene, index) => {
       row.prompt = results[index]
       row.modified = true
-      row.translating = false//设置为转换完成
+      row.translating = false // Set to translation complete
     })
     
     ElMessage.success(t('common.success'))
   } catch (error) {
     ElMessage.error(t('common.error'))
-    console.error('批量转换提示词失败:', error)
+    console.error('Batch prompt conversion failed:', error)
   } finally {
     loading.value = false
   }
 }
 
-const extractReferenceImageInfo = (scene:Scene) => {  
+const extractReferenceImageInfo = (scene: Scene) => {  
   let reference_image_infos = {
     character1: '',
     character2: '',
@@ -437,17 +436,17 @@ const extractReferenceImageInfo = (scene:Scene) => {
  
   const characters = scene.scene.match(/\{([^}]+)\}/g)?.map(match => match.slice(1, -1));
  
-  if (characters && characters.length>0) {
-    reference_image_infos.character1=characters[0]
-    if (characters.length>1) {
-      reference_image_infos.character2=characters[1]
+  if (characters && characters.length > 0) {
+    reference_image_infos.character1 = characters[0]
+    if (characters.length > 1) {
+      reference_image_infos.character2 = characters[1]
     }
   }
   return reference_image_infos
 }
 
-// 生成图片
-const generateSelectedImages = (selectedRows:Scene[]) => {
+// Generate images
+const generateSelectedImages = (selectedRows: Scene[]) => {
   const scenes = selectedRows.filter(scene => scene.prompt)
   if (scenes.length === 0) {
     ElMessage.warning(t('storyboardProcess.noPrompts'))
@@ -469,7 +468,7 @@ const generateSelectedImages = (selectedRows:Scene[]) => {
   }))
 }
 
-// 监听图片生成状态，刷新图片
+// Watch image generation status, refresh images
 watch(() => [...imageGenerationProgress.completedIds], (newIds) => {
   if (newIds.length === 0) return;
   const lastCompletedId = newIds[newIds.length - 1];
@@ -479,8 +478,8 @@ watch(() => [...imageGenerationProgress.completedIds], (newIds) => {
   }
 });
 
-// 生成音频
-const generateSelectedAudio = (selectedRows:Scene[]) => {
+// Generate audio
+const generateSelectedAudio = (selectedRows: Scene[]) => {
   if (selectedRows.length === 0) {
     ElMessage.warning(t('storyboardProcess.noSelection'))
     return
@@ -502,7 +501,7 @@ const generateSelectedAudio = (selectedRows:Scene[]) => {
     chapter_name: chapterName.value,
     audioSettings: {
       voice: audioSettings.value.narrator,
-      rate: `${audioSettings.value.speakingRate>=0?'+':''}${audioSettings.value.speakingRate}%`
+      rate: `${audioSettings.value.speakingRate >= 0 ? '+' : ''}${audioSettings.value.speakingRate}%`
     },
     prompts,
   };
@@ -510,7 +509,7 @@ const generateSelectedAudio = (selectedRows:Scene[]) => {
   startAudioGeneration(prompts, () => mediaApi.generateAudio(audioApiParams));
 }
 
-// 监听音频生成状态，刷新音频
+// Watch audio generation status, refresh audio
 watch(() => [...audioGenerationProgress.completedIds], (newIds) => {
   if (newIds.length === 0) return;
   const lastCompletedId = newIds[newIds.length - 1];
@@ -526,20 +525,20 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 当前页的数据
+// Current page data
 const currentPageData = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
   return sceneList.value.slice(start, end)
 })
 
-// 更新分页信息
+// Update pagination info
 const updatePagination = () => {
   total.value = sceneList.value.length
-  currentPage.value = 1 // 重置到第一页
+  currentPage.value = 1 // Reset to first page
 }
 
-// 获取场景列表
+// Fetch scene list
 const fetchSceneList = async () => {
   if (!chapterName.value) return
   
@@ -550,7 +549,7 @@ const fetchSceneList = async () => {
     if (data) {
       sceneList.value = data.map((scene: any) => ({
         id: scene.id,
-        base_scene:scene.base_scene,
+        base_scene: scene.base_scene,
         scene: scene.scene,
         span: scene.content,
         prompt: scene.prompt,
@@ -559,7 +558,6 @@ const fetchSceneList = async () => {
         translating: false,
         modified: false
       }))
-      console.log('Scene list with audio paths:', sceneList.value)
       updatePagination()
     }
   } catch (error) {
@@ -569,27 +567,26 @@ const fetchSceneList = async () => {
   }
 }
 
-// 处理场景内容变化
+// Handle scene content change
 const handleSceneChange = (row: Scene) => {
-  console.log('Scene changed:', row)
   row.modified = true
 }
 
-// 保存所有修改
+// Save all modifications
 const handleSaveAll = async () => {
   try {
     saving.value = true
-    // 过滤出被修改的场景
+    // Filter modified scenes
     const modifiedScenes = sceneList.value.filter(scene => scene.modified)
     if (modifiedScenes.length === 0) {
       ElMessage.info(t('common.noDataToProcess'))
       return
     }
 
-    // 调用保存接口
+    // Call save API
     await chapterApi.saveScenes(projectName.value, chapterName.value, modifiedScenes)
     
-    // 重置修改标记
+    // Reset modified flags
     modifiedScenes.forEach(scene => {
       scene.modified = false
     })
@@ -604,24 +601,22 @@ const handleSaveAll = async () => {
 
 const saving = ref(false)
 
-// 添加表格引用
+// Add table reference
 const tableRef = ref<InstanceType<typeof ElTable>>()
 
-async function getPromptStyle(){
-  // 获取提示词样式
+async function getPromptStyle() {
+  // Fetch prompt styles
   await promptStyleStore.fetchStyles()
-  console.log(promptStyleStore.styleOptions)
 }
 
 onMounted(() => {
-  
-  for(const voice in voices){
-    voiceList.value.push({ label: voice+" - "+voices[voice], value: voice })
+  for (const voice in voices) {
+    voiceList.value.push({ label: voice + " - " + voices[voice], value: voice })
   }
-  audioSettings.value.narrator=voiceList.value[0].value
+  audioSettings.value.narrator = voiceList.value[0].value
   
   getPromptStyle()
-  fetchChapterList() // 组件加载时获取章节列表
+  fetchChapterList() // Fetch chapter list on component mount
 })
 </script>
 
@@ -715,7 +710,7 @@ onMounted(() => {
       gap: 8px;
 
       .el-button {
-        width: 120px;  /* 添加固定宽度 */
+        width: 120px;  /* Add fixed width */
       }
     }
   }

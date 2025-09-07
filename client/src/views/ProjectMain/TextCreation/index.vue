@@ -1,6 +1,6 @@
 <template>
   <div class="text-creation">
-    <!-- 章节列表栏 -->
+    <!-- Chapter list bar -->
     <div class="chapter-header">
       <el-select
         v-model="currentChapter"
@@ -22,7 +22,7 @@
       </el-button>
     </div>
 
-    <!-- 设置栏 -->
+    <!-- Settings bar -->
     <div class="settings-bar">
       <el-switch
         v-model="isContinueMode"
@@ -36,7 +36,7 @@
       </el-checkbox>
     </div>
 
-    <!-- 文本内容栏 -->
+    <!-- Text content area -->
     <el-input
       v-model="content"
       type="textarea"
@@ -48,7 +48,7 @@
       ref="contentInput"
     />
 
-    <!-- 按钮栏 -->
+    <!-- Action bar -->
     <div class="action-bar">
       <el-button
         type="primary"
@@ -79,12 +79,11 @@
           {{ t('common.save') }}
         </el-button>
         <el-button
-          :type= "generating? 'danger':'primary'"
+          :type="generating ? 'danger' : 'primary'"
           @click="handleGenerate"
-          
         >
           <el-icon><VideoPause v-if="generating" /><Plus v-else /></el-icon>
-          {{ !generating? t('textCreation.write'):t('textCreation.stop') }}
+          {{ generating ? t('textCreation.stop') : t('textCreation.generate') }}
         </el-button>
       </div>
     </div>
@@ -96,7 +95,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { Plus, ScaleToOriginal, Check, User,VideoPause } from '@element-plus/icons-vue'
+import { Plus, ScaleToOriginal, Check, User, VideoPause } from '@element-plus/icons-vue'
 import { chapterApi } from '@/api/chapter_api'
 
 const route = useRoute()
@@ -104,51 +103,50 @@ const router = useRouter()
 const { t } = useI18n()
 const projectName = computed(() => route.params.name as string)
 
-// 状态变量
-const chapters = ref<string[]>([])  // 章节列表
-const currentChapter = ref('')  // 当前选中的章节
-const content = ref('')  // 当前章节内容
-const isContinueMode = ref(false)  // 是否为续写模式
-const useLastChapter = ref(true)  // 是否使用上一章内容作为上下文
-const hasContentChanged = ref(false)  // 内容是否发生变化
+// State variables
+const chapters = ref<string[]>([])  // Chapter list
+const currentChapter = ref('')  // Current selected chapter
+const content = ref('')  // Current chapter content
+const isContinueMode = ref(false)  // Continue mode toggle
+const useLastChapter = ref(true)  // Use last chapter as context
+const hasContentChanged = ref(false)  // Track content changes
 
-// 加载状态
-const saving = ref(false)  // 保存中
-const adding = ref(false)  // 添加章节中
-const generating = ref(false)  // 生成内容中
-const splitting = ref(false)  // 分割章节中
-const extracting = ref(false)  // 是否正在提取角色
+// Loading states
+const saving = ref(false)  // Saving in progress
+const adding = ref(false)  // Adding chapter in progress
+const generating = ref(false)  // Generating content in progress
+const splitting = ref(false)  // Splitting chapter in progress
+const extracting = ref(false)  // Extracting characters in progress
 
-// 自动保存定时器
+// Auto-save timer
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
-// 引用文本框
+// Textarea reference
 const contentInput = ref(null)
 
-// 监听内容变化，5秒后触发自动保存
-watch(content,async (_) => {
+// Watch content changes, trigger auto-save after 5 seconds
+watch(content, async () => {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer)
   }
   
-  // 标记内容已变化
+  // Mark content as changed
   hasContentChanged.value = true
   
-  // 自动滚动到文本框底部
+  // Auto-scroll to textarea bottom
   await nextTick()
   if (contentInput.value) {
     const textarea = contentInput.value.$el.querySelector('textarea')
     textarea.scrollTop = textarea.scrollHeight
   }
-
 })
 
-// 计算属性
+// Computed properties
 const isOperating = computed(() => {
   return saving.value || adding.value || generating.value || splitting.value || extracting.value
 })
 
-const canSave = computed(() => {//是否能够保存
+const canSave = computed(() => {
   return !isOperating.value && content.value.trim() && hasContentChanged.value
 })
 
@@ -158,7 +156,7 @@ const inputPlaceholder = computed(() => {
     : t('textCreation.createPlaceholder')
 })
 
-// 获取章节列表
+// Fetch chapter list
 const fetchChapterList = async () => {
   try {
     const response = await chapterApi.getChapterList(projectName.value)
@@ -172,7 +170,7 @@ const fetchChapterList = async () => {
   }
 }
 
-// 获取当前章节内容
+// Fetch current chapter content
 const fetchChapterContent = async () => {
   if (!currentChapter.value) return
   
@@ -182,32 +180,32 @@ const fetchChapterContent = async () => {
       currentChapter.value
     )
     content.value = response.content
-    // 重置内容变化标记
+    // Reset content change flag
     hasContentChanged.value = false
   } catch (error: any) {
     ElMessage.error(error.message || t('error.fetchChapterContentFailed'))
   }
 }
 
-// 章节选择变更处理
+// Handle chapter selection change
 const handleChapterChange = async () => {
   await fetchChapterContent()
 }
 
-// 添加新章节
+// Add new chapter
 const handleAddChapter = async () => {
   try {
     adding.value = true
     const data = await chapterApi.createChapter(projectName.value)
     
-    // 刷新章节列表
+    // Refresh chapter list
     await fetchChapterList()
     
-    // 切换到新章节
+    // Switch to new chapter
     currentChapter.value = data.chapter
     await fetchChapterContent()
     
-    // 清空内容
+    // Clear content
     content.value = ''
     
     ElMessage.success(t('textCreation.chapterCreated'))
@@ -218,7 +216,7 @@ const handleAddChapter = async () => {
   }
 }
 
-// 保存章节内容，showMessage为true时显示保存成功提示
+// Save chapter content, show success message if showMessage is true
 const handleSave = async (showMessage = true) => {
   if (!currentChapter.value || !content.value.trim()) return
   
@@ -229,7 +227,7 @@ const handleSave = async (showMessage = true) => {
       chapter_name: currentChapter.value,
       content: content.value
     })
-    // 重置内容变化标记
+    // Reset content change flag
     hasContentChanged.value = false
     if (showMessage) {
       ElMessage.success(t('success.saved'))
@@ -241,23 +239,22 @@ const handleSave = async (showMessage = true) => {
   }
 }
 
-const abortController = ref<AbortController | null>(null)//用于中断流式输出
+const abortController = ref<AbortController | null>(null) // For interrupting streaming output
 
-
-// 使用AI生成或续写文本内容
+// Generate or continue text content using AI
 const handleGenerate = async () => {
   try {
-    // 如果正在生成则触发停止
+    // Stop generation if already generating
     if (generating.value && abortController.value) {
       abortController.value.abort()
       generating.value = false
       return
     }
 
-    generating.value = true;
+    generating.value = true
     abortController.value = new AbortController()
     
-    // 调用API（自动处理流式）
+    // Call API (handles streaming automatically)
     const stream = await chapterApi.generateChapter({
       project_name: projectName.value,
       chapter_name: currentChapter.value,
@@ -266,45 +263,40 @@ const handleGenerate = async () => {
       use_last_chapter: useLastChapter.value,
       signal: abortController.value?.signal
     }) as ReadableStream
-    // 非续写模式清空内容
+
+    // Clear content in non-continue mode
     if (!isContinueMode.value) content.value = ''
-
-
 
     const reader = stream.getReader()
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
     let eventBuffer = ''
-
- 
-    let lastBreakLine = false;//检测是否刚刚换行
+    let lastBreakLine = false // Track recent line break
 
     const processEvent = (eventData: string) => {
       const dataLines = eventData.split('\n')
       let contentData = ''
       
-      // 合并多个data字段
+      // Combine multiple data fields
       dataLines.forEach(line => {
         if (line.startsWith('data: ')) {
-          contentData += line.slice(6) // 移除"data: "前缀
+          contentData += line.slice(6) // Remove "data: " prefix
         }
       })
 
-      // 处理特殊字符和换行
+      // Handle special characters and line breaks
       contentData = contentData
         .replace(/\\n/g, '\n')
         .replace(/\\'/g, "'")
         .replace(/\\"/g, '"')
         .trim()
       
-
       if (contentData && contentData !== '[DONE]') {
         content.value += contentData
-        lastBreakLine = false;
+        lastBreakLine = false
       } else {
-        
         if (!lastBreakLine) {
-          content.value += '\n'//识别换行
+          content.value += '\n' // Add line break
           lastBreakLine = true
         }
       }
@@ -316,25 +308,25 @@ const handleGenerate = async () => {
       
       buffer += decoder.decode(value, { stream: true })
       
-      // 分割完整事件（根据SSE规范，事件以\n\n分隔）
+      // Split complete events (SSE events are separated by \n\n)
       while (buffer.indexOf('\n\n') > -1) {
         const eventEnd = buffer.indexOf('\n\n')
         let eventChunk = buffer.slice(0, eventEnd)
         buffer = buffer.slice(eventEnd + 2)
    
-        // 合并连续事件中的data字段
+        // Combine continuous event data
         eventBuffer += eventChunk
         processEvent(eventBuffer)
         eventBuffer = ''
       }
     }
 
-    // 处理剩余数据
+    // Process remaining data
     if (buffer.length > 0) {
       processEvent(buffer)
     }
 
-    // 确保滚动到底部
+    // Ensure scroll to bottom
     await nextTick()
     if (contentInput.value) {
       const textarea = contentInput.value.$el.querySelector('textarea')
@@ -347,7 +339,8 @@ const handleGenerate = async () => {
     generating.value = false
   }
 }
-// 将当前章节分割为多个span
+
+// Split current chapter into multiple spans
 const handleSplitChapter = async () => {
   if (!currentChapter.value || !content.value) return
   
@@ -363,7 +356,7 @@ const handleSplitChapter = async () => {
   }
 }
 
-// 提取章节中的角色
+// Extract characters from chapter
 const handleExtractCharacters = async () => {
   if (!currentChapter.value || !content.value) return
   
@@ -372,18 +365,18 @@ const handleExtractCharacters = async () => {
     const res = await chapterApi.extractCharacters(projectName.value, currentChapter.value)
     if (res) {
       ElMessage.success(t('textCreation.extractSuccess'))
-      // 这里可以根据需要处理提取到的角色信息，比如显示在对话框中
-      console.log('提取到的角色信息：', res)
+      // Handle extracted character info as needed, e.g., display in a dialog
+      console.log('Extracted character info:', res)
     } 
   } catch (error) {
-    console.error('提取角色失败：', error)
+    console.error('Failed to extract characters:', error)
     ElMessage.error(t('common.error'))
   } finally {
     extracting.value = false
   }
 }
 
-// 组件挂载时加载章节列表
+// Load chapter list on component mount
 onMounted(() => {
   fetchChapterList()
 })
@@ -402,15 +395,13 @@ onMounted(() => {
   gap: 10px;
 
   .chapter-select {
-  flex: 1;
-}
+    flex: 1;
+  }
 
-  button{
+  button {
     width: 120px;
   }
 }
-
-
 
 .settings-bar {
   display: flex;

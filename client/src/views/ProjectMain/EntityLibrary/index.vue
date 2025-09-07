@@ -2,14 +2,14 @@
   <div class="entity-library">
     <h3>{{ config.title }}</h3>
     
-    <!-- 设置区域 -->
+    <!-- Settings area -->
     <el-row :gutter="24" class="settings-row">
       <el-col :span="24">
         <ImageSettingsControl v-model="imageSettings" />
       </el-col>
     </el-row>
 
-    <!-- 操作栏 -->
+    <!-- Action bar -->
     <div class="header-container">
       <el-button type="primary" @click="openCreateDialog">
         {{ config.createButtonText }}
@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <!-- 进度显示 -->
+    <!-- Progress display -->
     <el-row v-if="generationProgress.taskId" :gutter="24" class="progress-row">
       <el-col :span="24">
         <div class="settings-group">
@@ -52,7 +52,7 @@
       </el-col>
     </el-row>
 
-    <!-- 实体表格 -->
+    <!-- Entity table -->
     <el-table
       v-loading="loading"
       :data="filteredEntities"
@@ -72,7 +72,7 @@
         </template>
       </el-table-column>
       
-      <!-- 动态列 -->
+      <!-- Dynamic column -->
       <el-table-column v-if="entityType === 'character'" :label="t('entity.role')" width="150" align="center">
         <template #default="{ row }">
           <el-input v-model="row.attributes.role" type="textarea" :rows="2" :placeholder="t('entity.role')" :disabled="isLocked(row.name)"/>
@@ -122,7 +122,7 @@
       </el-table-column>
     </el-table>
 
-    <!-- 创建实体对话框 -->
+    <!-- Create entity dialog -->
     <el-dialog v-model="createDialogVisible" :title="config.createDialogTitle" width="600px">
       <div class="create-entity-form">
         <el-form :model="newEntity" label-width="120px">
@@ -165,11 +165,11 @@ const { t } = useI18n();
 const entityType = computed(() => route.params.entityType as 'character' | 'scene');
 const projectName = computed(() => route.params.name as string);
 
-// --- 组合式函数 ---
+// --- Composable functions ---
 const { isGenerating, generationProgress, start, stop } = useGeneration();
 const promptStyleStore = usePromptStyleStore();
 
-// --- 接口定义 ---
+// --- Interface definitions ---
 interface Entity {
   name: string;
   attributes: {
@@ -180,7 +180,7 @@ interface Entity {
   reference_image?: string;
 }
 
-// --- 组件状态 ---
+// --- Component state ---
 const loading = ref(false);
 const entities = ref<Entity[]>([]);
 const selectedEntities = ref<Entity[]>([]);
@@ -199,7 +199,7 @@ const imageSettings = ref<ImageSettings>({
   style: 'sai-anime'
 });
 
-// --- 根据实体类型动态配置 ---
+// --- Dynamic configuration based on entity type ---
 const config = computed(() => {
   const isCharacter = entityType.value === 'character';
   return {
@@ -214,7 +214,7 @@ const config = computed(() => {
   };
 });
 
-// --- 数据获取与处理 ---
+// --- Data fetching and processing ---
 const fetchEntities = async () => {
   loading.value = true;
   try {
@@ -236,6 +236,7 @@ const fetchEntities = async () => {
     ElMessage.error(String(error));
   } finally {
     loading.value = false;
+    console.log("Entities: ", entities.value);
   }
 };
 
@@ -249,7 +250,7 @@ const handleSelectionChange = (selection: Entity[]) => {
   selectedEntities.value = selection;
 };
 
-// --- 增删改查操作 ---
+// --- CRUD operations ---
 const openCreateDialog = () => {
   Object.assign(newEntity, { name: '', attributes: { role: '', description: '' } });
   createDialogVisible.value = true;
@@ -298,7 +299,7 @@ const deleteEntity = async (row: Entity) => {
   }
 };
 
-// --- 角色专属逻辑 ---
+// --- Character-specific logic ---
 const isLocked = (name: string) => {
   return entityType.value === 'character' && lockedEntities.value.includes(name);
 };
@@ -321,10 +322,10 @@ const handleLockClick = async (row: Entity) => {
   }
 };
 
-// --- 图像生成 ---
+// --- Image generation ---
 const generateImage = async (row: Entity) => {
   let prompts = [];
-  //增强提示词
+  // Enhance prompt
   if (entityType.value === 'character') {
     prompts = [{
       id: row.name,
@@ -332,7 +333,7 @@ const generateImage = async (row: Entity) => {
         ", full body, facing forward, front view, standing in a neutral pose, camera at a far distance, entire figure visible, plain light gray monochromatic background, minimalist environment, subtle shadow, no close-up, no text, no logo, no watermark"
     }];
   } else {
-    prompts = [{ id: row.name, prompt: row.attributes.description+"no human,wide-angle lens, establishing shot, vast environment, depth of field, cinematic scale" || '' }];
+    prompts = [{ id: row.name, prompt: row.attributes.description + ", no human, wide-angle lens, establishing shot, vast environment, depth of field, cinematic scale" || '' }];
   }
   start(prompts, () => mediaApi.generateImages({
     project_name: projectName.value,
@@ -346,6 +347,7 @@ const generateImagesForSelected = () => {
   const prompts = selectedEntities.value
     .filter(e => e.attributes.description)
     .map(e => ({ id: e.name, prompt: e.attributes.description || '' }));
+  console.log("Prompts: ", prompts);
   
   start(prompts, () => mediaApi.generateImages({
     project_name: projectName.value,
@@ -361,7 +363,7 @@ watch(isGenerating, (newValue, oldValue) => {
   }
 });
 
-// 监听单个图片完成事件
+// Watch for single image completion events
 watch(() => [...generationProgress.completedIds], (newIds, oldIds) => {
   if (newIds.length > oldIds.length) {
     const lastCompletedId = newIds[newIds.length - 1];
@@ -374,21 +376,19 @@ watch(() => [...generationProgress.completedIds], (newIds, oldIds) => {
 
 watch(entityType, () => {
     fetchEntities();
-    if(entityType.value === 'scene'){
-    imageSettings.value.width=768;
-    imageSettings.value.height=768;
-   
-  }else{
-     imageSettings.value.width=512;
-    imageSettings.value.height=768;
-  }
+    if (entityType.value === 'scene') {
+      imageSettings.value.width = 768;
+      imageSettings.value.height = 768;
+    } else {
+      imageSettings.value.width = 512;
+      imageSettings.value.height = 768;
+    }
 });
 
-// --- 生命周期钩子 ---
+// --- Lifecycle hooks ---
 onMounted(() => {
   fetchEntities();
   promptStyleStore.fetchStyles();
-  
 });
 </script>
 
@@ -413,4 +413,4 @@ onMounted(() => {
 .settings-row {
   margin-bottom: 20px;
 }
-</style> 
+</style>

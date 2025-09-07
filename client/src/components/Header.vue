@@ -12,7 +12,7 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 const isDark = ref(false)
 
-// 语言切换，true 表示英文，false 表示中文
+// Language switch, true for English, false for Chinese
 const isEnglish = ref(locale.value === 'en-US')
 
 const handleLanguageChange = (value: boolean) => {
@@ -38,7 +38,7 @@ const toggleTheme = () => {
         <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
       </el-button>
       <div class="lang-switch">
-        <span class="lang-label">中文</span>
+        <span class="lang-label">Vietnamese</span>
         <el-switch
           v-model="isEnglish"
           @change="handleLanguageChange"
@@ -86,7 +86,6 @@ const toggleTheme = () => {
 
     .lang-switch {
       display: flex;
-
       align-items: center;
       gap: 8px;
 

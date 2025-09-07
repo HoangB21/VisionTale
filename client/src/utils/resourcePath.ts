@@ -1,21 +1,21 @@
 import config from '@/config'
 
 /**
- * 生成资源访问路径
- * @param projectName 项目名称
- * @param chapterName 章节名称
- * @param spanIndex span索引
- * @param type 资源类型 ('image' | 'audio')
- * @returns 完整的资源访问路径
+ * Generate resource access path
+ * @param projectName Project name
+ * @param chapterName Chapter name
+ * @param spanId Span index
+ * @param type Resource type ('image' | 'audio' | 'video')
+ * @returns Full resource access path
  */
 export const getResourcePath = (
   projectName: string,
   chapterName: string,
   spanId?: string,
-  type: 'image' | 'audio' |'video'= 'image'
+  type: 'image' | 'audio' | 'video' = 'image'
 ): string => {
   const timestamp = Date.now()
-  let endpoint=''
+  let endpoint = ''
   switch (type) {
     case 'image':
       endpoint = '/media/get_image'
@@ -24,10 +24,10 @@ export const getResourcePath = (
       endpoint = '/media/get_audio'
       break;
     case 'video':
-      endpoint='/video/get_video'
+      endpoint = '/video/get_video'
       break;
   }
-  if(type!=='video')
+  if (type !== 'video')
     return `${config.baseApi}${endpoint}?project_name=${projectName}&chapter_name=${chapterName}&span_id=${spanId}&_t=${timestamp}`
   else
     return `${config.baseApi}${endpoint}?project_name=${projectName}&chapter_name=${chapterName}&_t=${timestamp}`

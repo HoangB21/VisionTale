@@ -3,6 +3,8 @@ import type { VideoSettings, VideoProgress } from '@/types/video'
 
 class VideoApi {
   generateVideo(settings: VideoSettings) {
+    console.log('Generating video with settings:', settings);
+
     return request.post<null>('/video/generate_video', settings)
   }
 

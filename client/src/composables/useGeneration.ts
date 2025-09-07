@@ -9,15 +9,15 @@ export interface GenerationPrompt {
 }
 
 /**
- * @description 一个用于处理通用异步生成任务的Vue组合式函数
+ * @description A Vue composable function for handling general asynchronous generation tasks
  */
-export function useGeneration() {
+export const useGeneration = () => {
     const { t } = useI18n();
 
-    // 内部状态
-    const _isGenerating = ref(false);
-    const _submittedPrompts = ref<GenerationPrompt[]>([]);
-    const _generationProgress = reactive({
+    // Internal state
+    const isGenerating = ref(false);
+    const submittedPrompts = ref<GenerationPrompt[]>([]);
+    const generationProgress = reactive({
         current: 0,
         total: 0,
         status: '', // 'running', 'completed', 'error', 'cancelled'
@@ -25,58 +25,57 @@ export function useGeneration() {
         errors: [] as string[],
         completedIds: [] as string[],
     });
-    let _progressTimer: ReturnType<typeof setInterval> | null = null;
+    let progressTimer: ReturnType<typeof setInterval> | null = null;
 
     /**
-     * @description 重置所有与生成相关的状态
+     * @description Reset all generation-related states
      */
     const resetProgress = () => {
-        if (_progressTimer) {
-            clearInterval(_progressTimer);
-            _progressTimer = null;
+        if (progressTimer) {
+            clearInterval(progressTimer);
+            progressTimer = null;
         }
-        _isGenerating.value = false;
-        _submittedPrompts.value = [];
-        _generationProgress.current = 0;
-        _generationProgress.total = 0;
-        _generationProgress.status = '';
-        _generationProgress.taskId = '';
-        _generationProgress.errors = [];
-        _generationProgress.completedIds = [];
+        isGenerating.value = false;
+        submittedPrompts.value = [];
+        generationProgress.current = 0;
+        generationProgress.total = 0;
+        generationProgress.status = '';
+        generationProgress.taskId = '';
+        generationProgress.errors = [];
+        generationProgress.completedIds = [];
     };
 
     /**
-     * @description 检查生成进度
+     * @description Check generation progress
      */
     const checkProgress = async () => {
-        if (!_generationProgress.taskId) {
+        if (!generationProgress.taskId) {
             resetProgress();
             return;
         }
 
         try {
-            const response = await mediaApi.getProgress(_generationProgress.taskId);
-            console.log(response)
+            const response = await mediaApi.getProgress(generationProgress.taskId);
             const { status, current, total, errors } = response;
-            
-            // 更新进度
+
+            // Update progress
             const newCompletedCount = current;
-            const alreadyKnownCompletedCount = _generationProgress.completedIds.length;
+            const alreadyKnownCompletedCount = generationProgress.completedIds.length;
             if (newCompletedCount > alreadyKnownCompletedCount) {
-                const newIds = _submittedPrompts.value.slice(alreadyKnownCompletedCount, newCompletedCount).map(p => p.id);
-                _generationProgress.completedIds.push(...newIds);
+                const newIds = submittedPrompts.value.slice(alreadyKnownCompletedCount, newCompletedCount).map(p => p.id);
+                generationProgress.completedIds.push(...newIds);
             }
 
-            _generationProgress.status = status;
-            _generationProgress.current = current;
-            _generationProgress.total = total;
-            _generationProgress.errors = errors || [];
+            generationProgress.status = status;
+            generationProgress.current = current;
+            generationProgress.total = total;
+            generationProgress.errors = errors || [];
 
-            if (status === 'completed' || status === 'error' || status === 'cancelled' || status === 'not_found') {
-                // 立即停止轮询，防止重复提示
-                if (_progressTimer) {
-                    clearInterval(_progressTimer);
-                    _progressTimer = null;
+            if (status === 'completed' || status === 'error' || status == 'cancelled' || status === 'not_found') {
+                // Stop polling immediately to prevent repeated prompts
+                if (progressTimer) {
+                    clearInterval(progressTimer);
+                    progressTimer = null;
                 }
 
                 if (status === 'completed') {
@@ -84,10 +83,10 @@ export function useGeneration() {
                 } else if (status === 'cancelled') {
                     ElMessage.info(t('storyboardProcess.generationCancelled'));
                 } else if (status === 'error') {
-                    ElMessage.error(errors?.join('\\n') || t('common.error'));
+                    ElMessage.error(errors?.join('\n') || t('common.error'));
                 }
-                
-                // 延迟重置，让UI可以显示最终状态
+
+                // Delay reset to allow UI to display final state
                 setTimeout(() => {
                     resetProgress();
                 }, 1500);
@@ -100,9 +99,9 @@ export function useGeneration() {
     };
 
     /**
-     * @description 启动一个生成任务
-     * @param prompts 包含id和prompt的数组
-     * @param apiCall 一个返回Promise的函数，该Promise解析为{task_id: string, total: number}
+     * @description Start a generation task
+     * @param prompts Array of objects containing id and prompt
+     * @param apiCall A function returning a Promise resolving to {task_id: string, total: number}
      */
     const start = async (
         prompts: GenerationPrompt[],
@@ -113,41 +112,41 @@ export function useGeneration() {
             return;
         }
 
-        if (_isGenerating.value) {
+        if (isGenerating.value) {
             ElMessage.warning(t('storyboardProcess.generationInProgress'));
             return;
         }
 
         try {
-            _isGenerating.value = true;
-            _submittedPrompts.value = [...prompts]; // 保存提交的prompts副本
-            _generationProgress.completedIds = []; // 清空上次的记录
+            isGenerating.value = true;
+            submittedPrompts.value = [...prompts]; // Save a copy of submitted prompts
+            generationProgress.completedIds = []; // Clear previous records
 
             const data = await apiCall();
 
-            _generationProgress.taskId = data.task_id;
-            _generationProgress.total = data.total;
-            _generationProgress.current = 0;
-            _generationProgress.status = 'running';
+            generationProgress.taskId = data.task_id;
+            generationProgress.total = data.total;
+            generationProgress.current = 0;
+            generationProgress.status = 'running';
 
-            if (_progressTimer) clearInterval(_progressTimer);
-            _progressTimer = setInterval(checkProgress, 1000);
+            if (progressTimer) clearInterval(progressTimer);
+            progressTimer = setInterval(checkProgress, 1000);
         } catch (error) {
             console.error('Failed to start generation:', error);
             ElMessage.error(t('common.operationFailed'));
             resetProgress();
         }
     };
-    
+
     /**
-     * @description 停止当前生成任务
+     * @description Stop the current generation task
      */
     const stop = async () => {
-        if (!_generationProgress.taskId) return;
+        if (!generationProgress.taskId) return;
         try {
-            await mediaApi.cancelTask(_generationProgress.taskId);
+            await mediaApi.cancelTask(generationProgress.taskId);
             ElMessage.success(t('storyboardProcess.stopGenerationSuccess'));
-            // checkProgress会处理后续的状态重置
+            // checkProgress will handle subsequent state reset
         } catch (error) {
             console.error('Failed to stop generation:', error);
             ElMessage.error(t('common.error'));
@@ -155,18 +154,18 @@ export function useGeneration() {
         }
     };
 
-    // 组件卸载时确保清除定时器
+    // Ensure timer is cleared when component is unmounted
     onBeforeUnmount(() => {
-        if (_progressTimer) {
-            clearInterval(_progressTimer);
+        if (progressTimer) {
+            clearInterval(progressTimer);
         }
     });
-    
-    // 返回只读的状态和可调用的方法
+
+    // Return read-only state and callable methods
     return {
-        isGenerating: readonly(_isGenerating),
-        generationProgress: readonly(_generationProgress),
+        isGenerating,
+        generationProgress,
         start,
         stop,
     };
-} 
+}

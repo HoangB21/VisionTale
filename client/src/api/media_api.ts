@@ -41,10 +41,14 @@ interface GenerationProgressResponse {
 
 export const mediaApi = {
   generateImages(params: GenerateImageParams) {
+    // console.log('Generating images with params:', params);
+
     return request.post('/media/generate_images', params)
   },
 
   generateAudio(params: GenerateAudioParams) {
+    console.log('Generating audio with params:', params);
+
     return request.post('/media/generate-audio', params)
   },
 

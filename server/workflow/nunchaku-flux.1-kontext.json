@@ -12,7 +12,7 @@
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "VAE解码"
+      "title": "VAE Decode"
     }
   },
   "10": {
@@ -21,7 +21,7 @@
     },
     "class_type": "VAELoader",
     "_meta": {
-      "title": "加载VAE"
+      "title": "Load VAE"
     }
   },
   "26": {
@@ -34,27 +34,25 @@
     },
     "class_type": "FluxGuidance",
     "_meta": {
-      "title": "Flux引导"
+      "title": "FluxGuidance"
     }
   },
   "44": {
     "inputs": {
-      "model_type": "flux",
-      "text_encoder1": "t5xxl_fp8_e4m3fn.safetensors",
+      "model_type": "flux.1",
+      "text_encoder1": "t5xxl_fp8_e4m3fn_scaled.safetensors",
       "text_encoder2": "clip_l.safetensors",
-      "t5_min_length": 512,
-      "use_4bit_t5": "disable",
-      "int4_model": "none"
+      "t5_min_length": 512
     },
-    "class_type": "NunchakuTextEncoderLoader",
+    "class_type": "NunchakuTextEncoderLoaderV2",
     "_meta": {
-      "title": "Nunchaku Text Encoder Loader"
+      "title": "Nunchaku Text Encoder Loader V2"
     }
   },
   "45": {
     "inputs": {
-      "model_path": "svdq-fp4_r32-flux.1-kontext-dev.safetensors",
-      "cache_threshold": 0.12000000000000002,
+      "model_path": "svdq-int4_r32-flux.1-kontext-dev.safetensors",
+      "cache_threshold": 0.12,
       "attention": "nunchaku-fp16",
       "cpu_offload": "auto",
       "device_id": 0,
@@ -75,13 +73,13 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "预览图像"
+      "title": "Preview Image"
     }
   },
   "49": {
     "inputs": {
-      "lora_name": "flux.1-turbo-alpha.safetensors",
-      "lora_strength": 1.0000000000000002,
+      "lora_name": "ghibliStyle_kontext_byJaneB.safetensors",
+      "lora_strength": 1,
       "model": [
         "45",
         0
@@ -89,7 +87,7 @@
     },
     "class_type": "NunchakuFluxLoraLoader",
     "_meta": {
-      "title": "Nunchaku FLUX.1 LoRA Loader"
+      "title": "Nunchaku FLUX LoRA Loader"
     }
   },
   "50": {
@@ -102,13 +100,13 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码-Negative"
+      "title": "CLIP Text Encode (Prompt)"
     }
   },
   "51": {
     "inputs": {
       "seed": 807358852710662,
-      "steps": 8,
+      "steps": 10,
       "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "simple",
@@ -132,7 +130,7 @@
     },
     "class_type": "KSampler",
     "_meta": {
-      "title": "K采样器"
+      "title": "KSampler"
     }
   },
   "52": {
@@ -143,7 +141,7 @@
     },
     "class_type": "EmptyLatentImage",
     "_meta": {
-      "title": "空Latent图像"
+      "title": "Empty Latent Image"
     }
   },
   "53": {
@@ -156,7 +154,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP文本编码"
+      "title": "CLIP Text Encode (Prompt)"
     }
   }
 }

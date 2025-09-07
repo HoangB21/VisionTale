@@ -5,30 +5,30 @@ interface Config {
 }
 
 export const adminApi = {
-  // 获取配置信息
+  // Get configuration information
   getConfig() {
     return request.get('/admin/config')
- },
+  },
 
- // 更新配置信息
- updateConfig(config: Record<string, any>) {
+  // Update configuration information
+  updateConfig(config: Record<string, any>) {
     return request.post('/admin/config', config)
- },
+  },
 
   /**
-   * 获取提示词样式列表
+   * Get prompt styles list
    */
   getPromptStyles() {
     return request.get('/admin/prompt_styles')
   },
 
   /**
-   * 保存提示词样式列表
-   * @param styles 提示词样式数组
+   * Save prompt styles list
+   * @param styles Array of prompt styles
    */
   savePromptStyles(styles: any[]) {
     return request.post('/admin/prompt_styles', { styles })
   }
 }
 
-export default adminApi 
+export default adminApi

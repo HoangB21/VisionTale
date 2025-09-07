@@ -16,7 +16,7 @@
                 label-position="top"
                 class="setting-form"
             >
-                <!-- ComfyUI 配置 -->
+                <!-- ComfyUI Configuration -->
                 <div class="setting-section">
                     <h3 class="section-title">ComfyUI</h3>
                     <el-form-item :label="t('setting.comfyui.apiUrl')" prop="comfyui.api_url">
@@ -35,7 +35,7 @@
                     </el-form-item>
                 </div>
 
-                <!-- 默认工作流配置 -->
+                <!-- Default Workflow Configuration -->
                 <div class="setting-section">
                     <h3 class="section-title">{{ t('setting.defaultWorkflow.name') }}</h3>
                     <el-form-item prop="default_workflow.name">
@@ -55,7 +55,7 @@
                     </el-form-item>
                 </div>
 
-                <!-- LLM配置 -->
+                <!-- LLM Configuration -->
                 <div class="setting-section">
                     <h3 class="section-title">{{ t('setting.llm.title') }}</h3>
                     <el-form-item :label="t('setting.llm.apiUrl')" prop="llm.api_url">
@@ -101,8 +101,7 @@
                     </el-form-item>
                 </div>
 
-
-                <!-- 路径配置 -->
+                <!-- Path Configuration -->
                 <div class="setting-section">
                     <h3 class="section-title">{{ t('setting.path.title') }}</h3>
                     <el-form-item :label="t('setting.path.projectsPath')" prop="relative_projects_path">
@@ -148,7 +147,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
-import { Check, Link, Monitor, Folder,Key } from '@element-plus/icons-vue'
+import { Check, Link, Monitor, Folder, Key } from '@element-plus/icons-vue'
 import adminApi from '@/api/admin_api'
 
 const { t } = useI18n()
@@ -174,15 +173,12 @@ const configForm = ref({
     relative_workflow_path: ''
 })
 
-// 获取配置信息
+// Fetch configuration
 const fetchConfig = async () => {
     loading.value = true
     try {
-        const data  = await adminApi.getConfig()
-        console.log(data)
-        // 保存工作流列表
+        const data = await adminApi.getConfig()
         allWorkflows.value = data.all_workflow || []
-        // 更新配置表单
         configForm.value = {
             comfyui: data.comfyui,
             default_workflow: data.default_workflow,
@@ -199,7 +195,7 @@ const fetchConfig = async () => {
     }
 }
 
-// 保存配置
+// Save configuration
 const handleSave = async () => {
     saving.value = true
     try {
@@ -320,7 +316,7 @@ onMounted(() => {
     }
 }
 
-/* 暗黑主题特定样式 */
+/* Dark theme specific styles */
 :deep(.dark) {
     .setting-section {
         background-color: var(--el-bg-color);

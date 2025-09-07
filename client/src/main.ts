@@ -11,7 +11,7 @@ import pinia from './store'
 
 const app = createApp(App)
 
-// 注册所有图标
+// Register all Element Plus icons
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }

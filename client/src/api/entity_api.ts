@@ -1,6 +1,5 @@
 import request from './request'
 
-
 export interface CharacterAttributes {
   role?: string
   description?: string
@@ -28,66 +27,66 @@ export interface CreateSceneParams {
 }
 
 export const entityApi = {
-  // 获取角色列表
+  // Get character list
   getCharacterList(projectName: string) {
     return request.get('entity/character/list', { project_name: projectName })
   },
-  
-  // 创建角色
+
+  // Create character
   createCharacter(projectName: string, params: CreateCharacterParams) {
-    return request.post('entity/character/create', { 
+    return request.post('entity/character/create', {
       project_name: projectName,
       name: params.name,
       attributes: params.attributes
     })
   },
-  
-  // 更新角色
+
+  // Update character
   updateCharacter(projectName: string, params: UpdateCharacterParams) {
-    return request.post('entity/character/update', { 
+    return request.post('entity/character/update', {
       project_name: projectName,
       name: params.name,
       attributes: params.attributes
     })
   },
-  
-  // 切换锁定状态
+
+  // Toggle lock status
   toggleLock(projectName: string, entityName: string) {
-    return request.post('entity/character/toggle_lock', { 
+    return request.post('entity/character/toggle_lock', {
       project_name: projectName,
       entity_name: entityName
     })
   },
 
-  // 删除角色
+  // Delete character
   deleteCharacter(projectName: string, entityName: string) {
     return request.delete(`entity/character/${entityName}`, { project_name: projectName })
   },
 
-  // 获取场景列表
+  // Get scene list
   getSceneList(projectName: string) {
     return request.get('entity/scene/list', { project_name: projectName })
   },
-  
-  // 创建场景
+
+  // Create scene
   createScene(projectName: string, params: CreateSceneParams) {
-    return request.post('entity/scene/create', { 
-      project_name: projectName,
-      name: params.name,
-      prompt: params.prompt
-    })
-  },
-  
-  // 更新场景
-  updateScene(projectName: string, params: UpdateSceneParams) {
-    return request.post('entity/scene/update', { 
+    return request.post('entity/scene/create', {
       project_name: projectName,
       name: params.name,
       prompt: params.prompt
     })
   },
 
-  // 删除场景
+  // Update scene
+  updateScene(projectName: string, params: UpdateSceneParams) {
+    return request.post('entity/scene/update', {
+      project_name: projectName,
+      name: params.name,
+      prompt: params.prompt
+    })
+  },
+
+  // Delete scene
   deleteScene(projectName: string, entityName: string) {
     return request.delete(`entity/scene/${entityName}`, { project_name: projectName })
   }

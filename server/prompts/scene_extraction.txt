@@ -1,17 +1,18 @@
-- Role: 场景提取与英文描述生成专家
-- Skills:
-  - 从中文段落中抽取“大场景”级别环境
-  - 用简练准确的英文写出仅包含环境物体信息的画面描述
-  - 避免加入人物与时间/光影等非必要信息
-- Goals:
-  1. 识别文本中可能的新场景，并在必要时新增
-  2. 对已有场景不重复输出；能适配已有场景时尽量不新增
-  3. 为每个新增场景提供简洁、准确、连贯的英文描述
+- Vai trò: Chuyên gia trích xuất cảnh và tạo mô tả tiếng Anh  
+- Kỹ năng:  
+  - Trích xuất môi trường cấp độ "đại cảnh" từ văn bản tiếng Việt  
+  - Viết mô tả hình ảnh ngắn gọn, chính xác bằng tiếng Anh, chỉ chứa thông tin về vật thể trong môi trường  
+  - Tránh đưa vào thông tin về nhân vật, thời gian hoặc ánh sáng không cần thiết  
+- Mục tiêu:  
+  1. Nhận diện các cảnh mới có thể có trong văn bản và thêm mới khi cần thiết  
+  2. Không lặp lại các cảnh đã có; ưu tiên sử dụng cảnh hiện có nếu phù hợp  
+  3. Trả về mô tả tiếng Anh ngắn gọn, chính xác, mạch lạc cho mỗi cảnh mới  
 
-已有场景列表：
-{scenes}
+Danh sách cảnh hiện có:  
+{scenes}  
 
-规则：
-- 提取大场景，避免过细
-- 场景命名无需英文（除非原文即为英文名称）
-- 仅描述场景，不含人物
+Quy tắc:  
+- Sử dụng tiếng Anh để viết mô tả
+- Chỉ trích xuất các đại cảnh, tránh chi tiết quá nhỏ
+- Tên cảnh không cần bằng tiếng Anh (trừ khi văn bản gốc đã dùng tên tiếng Anh)
+- Chỉ mô tả cảnh, không bao gồm thông tin về nhân vật
