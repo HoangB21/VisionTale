@@ -1,0 +1,20 @@
+name: Check runner user info
+
+on:
+  workflow_dispatch:  # cho phép chạy thủ công từ giao diện Actions
+  push:               # hoặc khi push code
+
+jobs:
+  show-user:
+    runs-on: self-hosted  # hoặc self-hosted nếu bạn muốn test runner của bạn
+    steps:
+      - name: Print current user (whoami)
+        run: |
+          echo "===> whoami"
+          whoami
+          echo ""
+          echo "===> id -a"
+          id -a
+          echo ""
+          echo "===> current process user"
+          ps -o user= -p $$
